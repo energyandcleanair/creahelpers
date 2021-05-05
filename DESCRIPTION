@@ -1,0 +1,36 @@
+Package: creahelpers
+Type: Package
+Title: What the Package Does (Title Case)
+Version: 0.1.0
+Authors@R: c(
+    person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("cre","aut")),
+    person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("aut"))
+    )
+Maintainer: Hubert Thieriot <hubert@energyandcleanair.org>
+Description: Helper functions used across CREA packages
+License: GPL 3.0
+Encoding: UTF-8
+LazyData: true
+Imports:
+    magrittr,
+    tidyr,
+    plyr,
+    dplyr,
+    reshape2,
+    data.table,
+    lubridate,
+    zoo,
+    lattice,
+    RColorBrewer,
+    ggplot2,
+    ggthemes,
+    sp,
+    raster,
+    rasterVis,
+    rworldmap,
+    rgdal,
+    sf,
+    geosphere,
+    gstat,
+    rgeos
+RoxygenNote: 7.1.1
