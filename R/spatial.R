@@ -141,3 +141,59 @@ simplify_adm = function(level=0, resname='low', version='36') {
   saveRDS(adm_coarse, gsub('\\.shp', '.RDS', f))
   return(adm_coarse)
 }
+
+
+#' Convert to spatialpointsdataframe
+#'
+#' @param data
+#' @param crs
+#' @param llcols
+#' @param na.action
+#'
+#' @return
+#' @export
+#'
+#' @examples
+to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
+
+  if(grepl('^Spatial',class(data))) {
+    warning('Data is already of type Spatial*')
+    return(data)
+  }
+
+  if(class(data) != 'data.frame')
+    as.data.frame(data) -> data
+
+
+  if(is.null(llcols)) {
+    llcols <- unlist(sapply(c("^longitude","^latitude"), grep,tolower(names(data))))
+
+    if(length(llcols)!=2)
+      llcols <- unlist(sapply(c("^lon","^lat"), grep, tolower(names(data))))
+
+    if(length(llcols)!=2)
+      llcols <- unlist(sapply(c("x","y"),function(str) { which(str == tolower(names(data))) }))
+
+    if(length(llcols)!=2)
+      llcols <- unlist(sapply(c("^x","^y"), grep, tolower(names(data))))
+
+    if(length(llcols)<2)
+      stop("could not identify coordinate columns, need to start with lat, lon or x, y")
+
+    if(length(llcols)>2)
+      stop("could not identify coordinate columns, too many starting with lat, lon or x, y")
+  }
+
+  if(anyNA(data[,llcols])) warning("NAs in coordinates")
+  data[row.names(na.action(data[,llcols])),] -> data
+
+  if(is.null(crs)) {
+    crs <- creapuff.env$llproj
+    warning("assuming lat-lon WGS84 coordinate system")
+  }
+
+  if(class(crs) == "character")
+    crs <- CRS(crs)
+
+  return(SpatialPointsDataFrame(coords = data[,llcols],data=data,proj4string = crs))
+}
