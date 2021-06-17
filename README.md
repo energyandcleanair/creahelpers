@@ -12,3 +12,5 @@ Some `creahelpers` functions need data stored in the so-called 'gis directory'. 
 ### Sync content
 To sync the content of your gis_directory with CREA Google Bucket, go to your gis directory and type:
 `gsutil rsync -r . gs://crea-data/gis`
+and
+`gsutil rsync -r gs://crea-data/gis .`
