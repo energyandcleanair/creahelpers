@@ -166,3 +166,55 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
 
   return(SpatialPointsDataFrame(coords = data[,llcols],data=data,proj4string = crs))
 }
+
+
+focal.loop <- function(r, w, fun, filename=raster::rasterTmpFile(), ...) {
+
+  #compile in hopes of speeding up
+  cmp_fun <- compiler::cmpfun(fun)
+
+  bs <- raster::blockSize(r)
+
+  #adjust chunksize down to account for extra "padding" rows
+  bs <- raster::blockSize(r, chunksize = ncol(r) * (bs$nrows[1]-dim(w)[1]))
+
+  #initialize
+  r.out <- raster(r)
+  r.out <- raster::writeStart(r.out, filename=filename, overwrite=TRUE)
+  pad.rows = (dim(w)[2]-1)/2 #number of rows to add above and below
+  for(i in 1:bs$n) {
+    #calculate number of padding rows, avoid trying to read outside raster
+    padUp = min(c(bs$row[i]-1, pad.rows))
+    padDown = min(c(nrow(r) - bs$row[i] - bs$nrows[i] + 1, pad.rows))
+
+    #read a chunk of rows and convert to matrix
+    raster::getValues(r, bs$row[i] - padUp,
+              bs$nrows[i] + padUp + padDown) %>%
+      matrix(ncol=ncol(r), byrow=T) -> r.sub
+
+    #convert to raster, run focal and convert to vector for writing
+    r.sub %>% raster %>%
+      raster::focal(w=w,fun=cmp_fun, ...) %>%
+      matrix(ncol=ncol(r), byrow=T) -> r.sub
+    r.sub[(padUp+1):(nrow(r.sub)-padDown),] %>%
+      t %>% as.vector-> r.sub
+
+    #write the rows back
+    r.out <- raster::writeValues(r.out, r.sub, bs$row[i])
+    cat('\rprocessed chunk ', i,' out of ', bs$n)
+  }
+  #save and exit
+  r.out <- raster::writeStop(r.out)
+  return(r.out)
+}
+
+focalcircle <- function(r, d,
+                        fun=function(x) weighted.mean(x, fw.c, na.rm=T),
+                        ...) {
+  fw.r=raster::focalWeight(r, d=d, type="rectangle")
+  fw.c=raster::focalWeight(r, d=d, type="circle")
+  fw.r[,] <- 1
+  fw.c[fw.c>0] <- 1
+  focal.loop(r, w=fw.r, pad=T, fun=fun, ...)
+}
+

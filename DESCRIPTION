@@ -33,5 +33,6 @@ Imports:
     geosphere,
     gstat,
     rgeos,
-    pbapply
+    pbapply,
+    compiler
 RoxygenNote: 7.1.1
