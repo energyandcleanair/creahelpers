@@ -218,3 +218,73 @@ focalcircle <- function(r, d,
   focal.loop(r, w=fw.r, pad=T, fun=fun, ...)
 }
 
+
+rasterize_lines <- function(lines, grid){
+
+  lines <- to_spdf(lines)
+
+  # Cut lines along grid cells
+  print("Polygonizing...")
+  rs <- grid
+  rs[] <- 1:ncell(rs)
+  names(rs) <- "i_cell"
+  rsp <- rasterToPolygons(rs)
+  print("Done")
+
+  # Add temporary feature id for grouping
+  lines$feature_id_tmp <- 1:nrow(lines)
+
+  print("Cutting along grid...")
+  # sf much less memory intensive than raster::intersect
+  # and faster
+
+  # Chunking it to avoid rgeos_binpredfunc_prepared: maximum returned dense matrix size exceeded
+  cutting_successful <- F
+  chunk_size <- 1E10
+  while(!cutting_successful){
+    tryCatch({
+      rsp$chunk <- rsp$i_cell %/% chunk_size
+      emission.sf <- sf::st_as_sf(lines)
+      rp <- pbapply::pblapply(split(sf::st_as_sf(rsp), rsp$chunk),
+                              function(rsp_chunk){
+                                sf::st_intersection(emission.sf,rsp_chunk)
+                              }) %>%
+        do.call("bind_rows",.)
+      cutting_successful <- T
+    }, error=function(e){
+      if("size exceeded" %in% as.character(e)){
+        chunk_size <- chunk_size / 100
+        warning("Cutting failed: ", e, "\n Trying with smaller chunk size", )
+      }else{
+        stop(e)
+      }
+    })
+  }
+
+  print("Done")
+
+  print("Calculating length...")
+  rp$length <- sf::st_length(rp, byid=TRUE)
+  print("Done")
+
+  # # Weighting accordingly
+  # print("Weighting by length...")
+  # rp <- rp %>%
+  #   group_by(feature_id_tmp) %>%
+  #   do(mutate(., emission=.$emission * length / sum(.$length)))
+  # print("Done")
+
+  print("Rasterizing...")
+  rp.sum <- rp %>%
+    group_by(i_cell=as.integer(i_cell), poll) %>%
+    summarise(length=sum(length, na.rm=T))
+
+  # Print into raster directly!
+   cells_x <- rep(0,ncell(rs))
+   cells_x[rp.sum$i_cell] <- rp.sum$length
+   grid_result <- grid
+   grid_result[] <- cells_x
+
+  return(grid_result)
+}
+
