@@ -221,7 +221,13 @@ focalcircle <- function(r, d,
 
 rasterize_lines <- function(lines, grid){
 
+  if(is.na(crs(lines)))
   lines <- to_spdf(lines)
+
+  if(is.na(raster::crs(lines))){
+    message("Assuming crs are the same")
+    raster::crs(lines) <- raster::crs(raster::raster(pop))
+  }
 
   # Cut lines along grid cells
   print("Polygonizing...")
@@ -276,7 +282,7 @@ rasterize_lines <- function(lines, grid){
 
   print("Rasterizing...")
   rp.sum <- rp %>%
-    group_by(i_cell=as.integer(i_cell), poll) %>%
+    group_by(i_cell=as.integer(i_cell)) %>%
     summarise(length=sum(length, na.rm=T))
 
   # Print into raster directly!
