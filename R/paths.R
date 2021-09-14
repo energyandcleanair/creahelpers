@@ -28,18 +28,18 @@ get_gis_dir <- function(){
 }
 
 
-get_boundaries_path <- function(file){
+get_boundaries_path <- function(file=""){
   file.path(get_gis_dir(), "boundaries", file)
 }
 
-get_concentration_path <- function(file){
+get_concentration_path <- function(file=""){
   file.path(get_gis_dir(), "concentration", file)
 }
 
-get_landcover_path <- function(file){
+get_landcover_path <- function(file=""){
   file.path(get_gis_dir(), "landcover", file)
 }
 
-get_population_path <- function(file){
+get_population_path <- function(file=""){
   file.path(get_gis_dir(), "population", file)
 }
