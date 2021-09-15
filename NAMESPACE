@@ -30,9 +30,6 @@ importFrom(dplyr,tibble)
 importFrom(dplyr,ungroup)
 importFrom(dplyr,vars)
 
-importFrom(ggspatial,annotation_spatial)
-importFrom(ggspatial,layer_spatial)
-
 importFrom(lubridate,"hour<-")
 importFrom(lubridate,day)
 importFrom(lubridate,hour)
