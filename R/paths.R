@@ -43,3 +43,7 @@ get_landcover_path <- function(file=""){
 get_population_path <- function(file=""){
   file.path(get_gis_dir(), "population", file)
 }
+
+get_elevation_path <- function(file=""){
+  file.path(get_gis_dir(), "elevation", file)
+}
