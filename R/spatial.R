@@ -167,6 +167,39 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
   return(SpatialPointsDataFrame(coords = data[,llcols],data=data,proj4string = crs))
 }
 
+#' Convert to raster format if not.
+#' (using raster::raster loses values if already a raster)
+#'
+#' @param x
+#'
+#' @return
+#' @export
+#'
+#' @examples
+to_raster <- function(x){
+  if(class(x)[1]!="RasterLayer"){
+    raster(x)
+  }else{
+    x
+  }
+}
+
+#' Convert to terra::rast format if not.
+#' (using terra::rast loses values if already a rast)
+#'
+#' @param x
+#'
+#' @return
+#' @export
+#'
+#' @examples
+to_rast <- function(x){
+  if(class(x)[1]!="SpatRaster"){
+    terra::rast(x)
+  }else{
+    x
+  }
+}
 
 focal.loop <- function(r, w, fun, filename=raster::rasterTmpFile(), ...) {
 
@@ -234,7 +267,8 @@ rasterize_lines <- function(lines, grid){
   rs <- grid
   rs[] <- 1:ncell(rs)
   names(rs) <- "i_cell"
-  rsp <- rasterToPolygons(rs)
+  # TERRA much faster than raster::rasterToPolygons
+  rsp <- terra::as.polygons(rast(rs)) %>% sf::st_as_sf()
   print("Done")
 
   # Add temporary feature id for grouping

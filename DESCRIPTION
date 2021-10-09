@@ -26,6 +26,7 @@ Imports:
     ggthemes,
     sp,
     raster,
+    terra,
     rasterVis,
     rworldmap,
     rgdal,
