@@ -27,7 +27,6 @@ Imports:
     sp,
     raster,
     terra,
-    rasterVis,
     rworldmap,
     rgdal,
     sf,
