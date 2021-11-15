@@ -9,7 +9,7 @@
 #' @return SpatialPolygonsDataFrame
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
 #' @export
-get_adm <- function(level=0, res='full', version='36') {
+get_adm <- function(level=0, res='full', version='36', iso2s=NULL) {
 
   resext=''
   if(res!='full') resext=paste0('_', res)
@@ -28,7 +28,13 @@ get_adm <- function(level=0, res='full', version='36') {
     simplify_adm(level, res, version)
   }
 
-  readRDS(f)
+  g <- readRDS(f)
+
+  if(!is.null(iso2s)){
+    g <- g[g$GID_0 %in% countrycode::countrycode(iso2s, "iso2c", "iso3c"),]
+  }
+
+  return(g)
 }
 
 

@@ -130,6 +130,10 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
     return(data)
   }
 
+  if(class(data)[1]=="sf"){
+    return(as(data, "Spatial"))
+  }
+
   if(class(data) != 'data.frame')
     as.data.frame(data) -> data
 
