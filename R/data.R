@@ -9,26 +9,37 @@
 #' @return SpatialPolygonsDataFrame
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
 #' @export
-get_adm <- function(level=0, res='full', version='36') {
+get_adm <- function(level=0, res='full', version='410', iso2s=NULL, method='rgeos') {
 
-  resext=''
-  if(res!='full') resext=paste0('_', res)
+  if(res=='full'){
+    ext=paste0(version, '_', level, '_', res)
+  }else{
+    ext=paste0(version, '_', level, '_', res, '_', method)
+  }
 
-  f <- get_boundaries_path(paste0('gadm',version,'_',level, resext,'.RDS'))
+
+  f <- get_boundaries_path(paste0('gadm/gadm',ext,'.RDS'))
 
   if(!file.exists(f) & res=='full') {
-    message('RDS not found, trying shapefile')
-    raster::shapefile(gsub('\\.RDS','.shp',f),
-                      encoding='UTF-8', use_iconv=TRUE) -> adm
+    message('RDS not found, trying geopackage')
+    adm <- sf::st_read(get_boundaries_path(paste0('gadm/gadm_410-levels.gpkg')),
+                layer=paste0('ADM_',level)) %>%
+      creahelpers::to_spdf()
     saveRDS(adm, f)
   }
 
   if(!file.exists(f) & res!='full') {
     message('simplifying the admin features')
-    simplify_adm(level, res, version)
+    simplify_adm(level, res, version, method)
   }
 
-  readRDS(f)
+  g <- readRDS(f)
+
+  if(!is.null(iso2s)){
+    g <- g[g$GID_0 %in% countrycode::countrycode(iso2s, "iso2c", "iso3c"),]
+  }
+
+  return(g)
 }
 
 

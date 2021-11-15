@@ -34,5 +34,7 @@ Imports:
     gstat,
     rgeos,
     pbapply,
-    compiler
+    compiler,
+    countrycode,
+    rgeos
 RoxygenNote: 7.1.1

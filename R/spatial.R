@@ -93,21 +93,46 @@ cropProj <- function(shapeobj, rasterobj, expand=1.25, ...) {
 #' @return SpatialPolygonsDataFrame
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
 #' @export
-simplify_adm = function(level=0, resname='low', version='36') {
+simplify_adm = function(level=0, resname='low', version='410', method) {
 
-  if(resname=='low') tol=.005
-  if(resname=='coarse') tol=.025
+  print(method)
 
   get_adm(level, res='full', version) -> adm
-  adm %>% sf::st_as_sf() -> adm_sf
 
-  adm_sf %>% sf::st_simplify(dTolerance = tol) -> adm_sf_coarse
+  # adm %>% sf::st_as_sf() -> adm_sf
+  # creahelpers::to_spdf(adm) -> adm_sp
+  if(method=='rgeos'){
+    if(resname=='low') tol=.005
+    if(resname=='coarse') tol=.025
 
-  f = get_boundaries_path(paste0('gadm',version,'_',level,'_',resname,'.shp'))
-  sf::st_write(adm_sf_coarse, f, overwrite=T, append=F)
-  raster::shapefile(f) -> adm_coarse
+    # RGEOS approach
+    adm_gsimplify <- rgeos::gSimplify(adm, tol = tol, topologyPreserve = TRUE)
+    # gSimplify doesn't preserve the @data frame, though, so we should re-create it:
+    adm_df <- adm@data
+    adm_sf_coarse <- sp::SpatialPolygonsDataFrame(adm_gsimplify, adm_df) %>% sf::st_as_sf()
+  }
 
-  saveRDS(adm_coarse, gsub('\\.shp', '.RDS', f))
+  if(method=='rmapshaper'){
+    # Trying to fix orphaned holes in R
+    adm <- rgeos::gBuffer(adm, byid=T, width=0)
+
+    # RMAPSHAPER approach
+    if(resname=='low') keep=.1
+    if(resname=='coarse') keep=.05
+
+    adm_sf_coarse <- rmapshaper::ms_simplify(input = adm, keep=keep, sys=T) %>% sf::st_as_sf()
+  }
+
+
+
+  # Original approach
+  # adm_sf %>% sf::st_simplify(dTolerance = tol) -> adm_sf_coarse
+
+  f = get_boundaries_path(paste0('gadm/gadm',version,'_',level,'_',resname,'_',method,'.gpkg'))
+  sf::st_write(sf::st_as_sf(adm_sf_coarse), f, overwrite=T, append=F)
+  adm_coarse <- sf::read_sf(f) %>% creahelpers::to_spdf()
+
+  saveRDS(adm_coarse, gsub('\\.gpkg', '.RDS', f))
   return(adm_coarse)
 }
 
@@ -128,6 +153,10 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
   if(grepl('^Spatial',class(data))) {
     warning('Data is already of type Spatial*')
     return(data)
+  }
+
+  if(class(data)[1]=="sf"){
+    return(as(data, "Spatial"))
   }
 
   if(class(data) != 'data.frame')
