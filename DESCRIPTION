@@ -35,5 +35,8 @@ Imports:
     rgeos,
     pbapply,
     compiler,
-    countrycode
+    countrycode,
+    cartomisc
+Remotes:
+    statnmap/cartomisc
 RoxygenNote: 7.1.1
