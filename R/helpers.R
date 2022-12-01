@@ -29,3 +29,26 @@ sigfloor <- function(x,sigdig=1) {
 orderfactor <- function(var, by) {
   var = factor(var, levels = var[rev(order(by))])
 }
+
+
+expand_dates <- function(df, datecol='date', targetdates=NULL) {
+  groupvarlist <- df %>% select(all_of(dplyr::group_vars(df))) %>% as.list() %>% lapply(unique)
+
+  if(is.null(targetdates))
+    targetdates <- seq.Date(min(df[[datecol]]),
+                            max(df[[datecol]]),
+                            by='day')
+
+  if(!is.list(targetdates)) targetdates %<>% list
+
+  names(targetdates) <- datecol
+  full_join(df, expand.grid(c(groupvarlist, targetdates)))
+}
+
+get_yoy <- function(x, date) {
+  lastyr <- date
+  year(lastyr) %<>% subtract(1)
+  ind = match(lastyr, date)
+  x / x[ind] - 1
+}
+
