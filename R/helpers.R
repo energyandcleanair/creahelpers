@@ -2,6 +2,21 @@ sel <- dplyr::select
 
 '%notin%' <- function(x,y)!('%in%'(x,y))
 
+#' Capitalize the first letter of each word
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
+capitalize_first <- function(x, rest_lower=T) {
+  sapply(x, function(x) {
+    if(is.na(x)) return(x)
+    tolower_if = function(x) {if(rest_lower) {return(tolower(x))}else return(x)}
+    sapply(x, function(x) {
+      s <- strsplit(x, " ")[[1]]
+      paste(toupper(substring(s, 1,1)), tolower_if(substring(s, 2)),
+            sep="", collapse=" ")
+    } )
+  })
+}
 
 #' Replace NA values in a vector with the corresponding values of another vector
 #'
