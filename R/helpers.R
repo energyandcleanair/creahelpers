@@ -82,16 +82,12 @@ pchcheat <- function() {
   text(x=rep(1:5,5),y=sapply(1:5,rep,5),1:25,pos=c(rep(3,5),rep(1,20)))
 }
 
-quicksave <- function(file, width=8, height=6, bg='white', ...) {
-  ggsave(file, width=width, height=height, bg=bg, ...)
-}
-
 #show all named colors
 colcheat <- function(cl=colors(), bg = "grey",
                            cex = 0.75, rot = 30) {
   m <- ceiling(sqrt(n <-length(cl)))
   length(cl) <- m*m; cm <- matrix(cl, m)
-  require("grid")
+  require(grid)
   grid.newpage(); vp <- viewport(w = .92, h = .92)
   grid.rect(gp=gpar(fill=bg))
   grid.text(cm, x = col(cm)/m, y = rev(row(cm))/m, rot = rot,
