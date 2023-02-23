@@ -99,6 +99,7 @@ simplify_adm = function(level=0, resname='low', version='410', method) {
 
   get_adm(level, res='full', version) -> adm
 
+  adm_sf_coarse <- rmapshaper::ms_simplify(input = as(adm, 'SpatialPolygonsDataFrame')) %>% sf::st_as_sf()
 
   # Original approach
   # adm_sf %>% sf::st_simplify(dTolerance = tol) -> adm_sf_coarse
@@ -178,7 +179,7 @@ remove_small_polygons <- function(spdf, threshold_km2){
 #' @examples
 to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
 
-  if(grepl('^Spatial',class(data))) {
+  if(any(grepl('^Spatial',class(data)))) {
     warning('Data is already of type Spatial*')
     return(data)
   }
@@ -187,9 +188,9 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
     return(as(data, "Spatial"))
   }
 
-  if(class(data) != 'data.frame')
+  if(all(class(data) != 'data.frame')){
     as.data.frame(data) -> data
-
+  }
 
   if(is.null(llcols)) {
     llcols <- unlist(sapply(c("^longitude","^latitude"), grep,tolower(names(data))))
@@ -385,3 +386,30 @@ rasterize_lines <- function(lines, grid){
   return(grid_result)
 }
 
+#' Buffer a sf without overlapping amongst features. Mainly useful
+#' to extend region boundaries into sea
+#'
+#' @param g_sf
+#' @param buffer_km
+#'
+#' @return
+#' @export
+#'
+#' @examples
+buffer <- function(g_sf, buffer_km, id_col, grouping_cols){
+
+    g_coast <- cartomisc::regional_seas(g_sf %>% sf::st_transform(3857),
+                                        group=id_col,
+                                        dist=buffer_km*1000) %>%
+      left_join(g %>% as.data.frame() %>% dplyr::select(id, name, province))
+
+    g_sf <-  bind_rows(g_sf %>% sf::st_transform(3857),
+                    g_coast) %>%
+      # st_snap(x = ., y = ., tolerance = 0.0001) %>% # for sliver polygons but too slow
+      group_at(grouping_cols) %>%
+      summarise() %>%
+      sf::st_transform(sf::st_crs(g_sf)) %>%
+      sf::st_make_valid()
+
+    return(g_sf)
+}

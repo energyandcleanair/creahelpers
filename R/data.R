@@ -17,7 +17,6 @@ get_adm <- function(level=0, res='full', version='410', iso2s=NULL, method='rgeo
     ext=paste0(version, '_', level, '_', res, '_', method)
   }
 
-
   f <- get_boundaries_path(paste0('gadm/gadm',ext,'.RDS'))
 
   if(!file.exists(f) & res=='full') {
