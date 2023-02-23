@@ -99,17 +99,28 @@ simplify_adm = function(level=0, resname='low', version='410', method) {
 
   get_adm(level, res='full', version) -> adm
 
+
+  # Original approach
+  # adm_sf %>% sf::st_simplify(dTolerance = tol) -> adm_sf_coarse
   # adm %>% sf::st_as_sf() -> adm_sf
   # creahelpers::to_spdf(adm) -> adm_sp
   if(method=='rgeos'){
-    if(resname=='low') tol=.005
-    if(resname=='coarse') tol=.025
+    if(resname=='low'){
+      tol=.005
+      threshold_km2=25
+    }
+
+    if(resname=='coarse'){
+      tol=.05
+      threshold_km2=250
+    }
 
     # RGEOS approach
-    adm_gsimplify <- rgeos::gSimplify(adm, tol = tol, topologyPreserve = TRUE)
     # gSimplify doesn't preserve the @data frame, though, so we should re-create it:
+    adm_gsimplify <- rgeos::gSimplify(adm, tol = tol, topologyPreserve = TRUE)
     adm_df <- adm@data
-    adm_sf_coarse <- sp::SpatialPolygonsDataFrame(adm_gsimplify, adm_df) %>% sf::st_as_sf()
+    adm_simplified <- sp::SpatialPolygonsDataFrame(adm_gsimplify, adm_df)
+    adm_simplified <- remove_small_polygons(adm_simplified, threshold_km2 = threshold_km2)
   }
 
   if(method=='rmapshaper'){
@@ -120,22 +131,39 @@ simplify_adm = function(level=0, resname='low', version='410', method) {
     if(resname=='low') keep=.1
     if(resname=='coarse') keep=.05
 
-    adm_sf_coarse <- rmapshaper::ms_simplify(input = adm, keep=keep, sys=T) %>% sf::st_as_sf()
+    adm_simplified <- rmapshaper::ms_simplify(input = adm, keep=keep, sys=T)
   }
 
-
-
-  # Original approach
-  # adm_sf %>% sf::st_simplify(dTolerance = tol) -> adm_sf_coarse
+  adm_simplified_sf <- sf::st_as_sf(adm_simplified)
 
   f = get_boundaries_path(paste0('gadm/gadm',version,'_',level,'_',resname,'_',method,'.gpkg'))
-  sf::st_write(sf::st_as_sf(adm_sf_coarse), f, overwrite=T, append=F)
-  adm_coarse <- sf::read_sf(f) %>% creahelpers::to_spdf()
-
-  saveRDS(adm_coarse, gsub('\\.gpkg', '.RDS', f))
-  return(adm_coarse)
+  sf::st_write(sf::st_as_sf(adm_simplified_sf), f, overwrite=T, append=F)
+  adm_simplified <- sf::read_sf(f) %>% creahelpers::to_spdf()
+  saveRDS(adm_simplified, gsub('\\.gpkg', '.RDS', f))
+  return(adm_simplified)
 }
 
+remove_small_polygons <- function(spdf, threshold_km2){
+
+  if(is.null(threshold_km2)){
+    return(spdf)
+  }
+
+  spdf_dis <- disaggregate(spdf)
+
+  # Use terra. Facing errors with rgeos::gArea
+  # Threshold: A tenth of Luxembourg ~ 250km2
+  # areas <- rgeos::gArea(adm_simplified, byid = TRUE)
+  spdf_dis_vect <- terra::vect(spdf_dis)
+  areas <- terra::expanse(spdf_dis_vect, unit='km')
+  # threshold <- 250 #areas[which(adm_simplified_vect$GID_0=='LUX')] %>% sum() / 10
+  spdf_dis_vect <- spdf_dis_vect[which(areas >= threshold_km2)]
+
+  # Re aggregate
+  spdf_dis <- as(spdf_dis_vect, "Spatial")
+  spdf <- aggregate(spdf_dis, by=names(spdf_dis))
+  return(spdf)
+}
 
 #' Convert to spatialpointsdataframe
 #'
