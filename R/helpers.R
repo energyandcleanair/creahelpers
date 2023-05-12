@@ -195,3 +195,52 @@ x_at_zero <- function(headroom=.05, ...) {
   list(ggplot2::scale_y_continuous(expand=ggplot2::expansion(mult=c(0,headroom)), ...),
        ggplot2::expand_limits(y=0))
 }
+
+#function to read in an excel file with multiple header rows, either combining into one row (wide=T) or pivoting longer
+silent_read <- function(...) suppressMessages(read_xlsx(...))
+
+read_wide_xlsx <- function(path, sheet=NULL,
+                           header_rows = length(header_row_names),
+                           skip=0,
+                           info_columns=1,
+                           header_row_names=paste0('V', 1:header_rows),
+                           stop_at_blank_row=T, discard_empty_columns=T,
+                           wide_format=F,
+                           ...) {
+  header <- silent_read(path, sheet=sheet, skip=skip, n_max=header_rows, col_names = F)
+  data <- silent_read(path, sheet=sheet, skip=header_rows+skip, col_names = F, ...)
+
+  if(stop_at_blank_row) {
+    first_empty_row <- data %>% apply(1, function(x) sum(!is.na(x))) %>% equals(0) %>% which %>% min
+    data %<>% slice_head(n=first_empty_row-1)
+  }
+
+  if(discard_empty_columns) {
+    empty_columns <- data %>% apply(2, function(x) sum(!is.na(x))) %>% equals(0) %>% which
+    data %<>% select(-all_of(empty_columns))
+  }
+
+  header %>% t %>% as_tibble() %>%
+    fill(everything(), .direction='down') %>%
+    apply(1, function(x) x %>% na.omit %>% matrix(nrow=1) %>% as_tibble) %>%
+    bind_rows() ->
+    header_df
+
+  header_df %>% select(matches('^V[0-9]+$')) %>%
+    apply(1, function(x) x %>% na.omit %>% paste(collapse='_')) ->
+    header_colnames
+
+  if(!is.null(header_row_names)) names(header_df) <- header_row_names
+  header_df %<>% mutate(col=names(header))
+
+  if(wide_format) names(data) <- header_colnames
+
+  if(!wide_format) {
+    names(data)[info_columns] <- header_colnames[info_columns]
+
+    data %>%
+      mutate(across(-all_of(info_columns), as.character)) %>%
+      pivot_longer(-all_of(info_columns), names_to='col') %>%
+      right_join(header_df, .) %>% select(-col)
+  }
+}
