@@ -166,6 +166,28 @@ remove_small_polygons <- function(spdf, threshold_km2){
   return(spdf)
 }
 
+
+identify_coordinate_columns <- function(data) {
+  llcols <- unlist(sapply(c("^longitude","^latitude"), grep,tolower(names(data))))
+
+  if(length(llcols)!=2)
+    llcols <- unlist(sapply(c("^lon","^lat"), grep, tolower(names(data))))
+
+  if(length(llcols)!=2)
+    llcols <- unlist(sapply(c("x","y"),function(str) { which(str == tolower(names(data))) }))
+
+  if(length(llcols)!=2)
+    llcols <- unlist(sapply(c("^x","^y"), grep, tolower(names(data))))
+
+  if(length(llcols)<2)
+    stop("could not identify coordinate columns, need to start with lat, lon or x, y")
+
+  if(length(llcols)>2)
+    stop("could not identify coordinate columns, too many starting with lat, lon or x, y")
+
+  return(llcols)
+}
+
 #' Convert to spatialpointsdataframe
 #'
 #' @param data
@@ -192,24 +214,7 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
     as.data.frame(data) -> data
   }
 
-  if(is.null(llcols)) {
-    llcols <- unlist(sapply(c("^longitude","^latitude"), grep,tolower(names(data))))
-
-    if(length(llcols)!=2)
-      llcols <- unlist(sapply(c("^lon","^lat"), grep, tolower(names(data))))
-
-    if(length(llcols)!=2)
-      llcols <- unlist(sapply(c("x","y"),function(str) { which(str == tolower(names(data))) }))
-
-    if(length(llcols)!=2)
-      llcols <- unlist(sapply(c("^x","^y"), grep, tolower(names(data))))
-
-    if(length(llcols)<2)
-      stop("could not identify coordinate columns, need to start with lat, lon or x, y")
-
-    if(length(llcols)>2)
-      stop("could not identify coordinate columns, too many starting with lat, lon or x, y")
-  }
+  if(is.null(llcols)) llcols <- identify_coordinate_columns(data)
 
   if(anyNA(data[,llcols])) warning("NAs in coordinates")
   data[row.names(na.action(data[,llcols])),] -> data
@@ -224,6 +229,31 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
 
   return(SpatialPointsDataFrame(coords = data[,llcols],data=data,proj4string = crs))
 }
+
+to_sf_points <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
+
+  if('sf' %in% class(data)) {
+    warning('Data is already of type sf')
+    return(data)
+  }
+
+  if(all(class(data) != 'data.frame')){
+    tibble::as_tibble(data) -> data
+  }
+
+  if(is.null(llcols)) llcols <- identify_coordinate_columns(data)
+
+  if(anyNA(data[,llcols])) warning("NAs in coordinates")
+  data[row.names(na.action(data[,llcols])),] -> data
+
+  if(is.null(crs)) {
+    crs <- 4326
+    warning("assuming lat-lon WGS84 coordinate system")
+  }
+
+  sf::st_as_sf(data, coords=llcols, crs=crs)
+}
+
 
 #' Convert to raster format if not.
 #' (using raster::raster loses values if already a raster)
