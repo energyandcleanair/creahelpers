@@ -215,7 +215,7 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
   data[row.names(na.action(data[,llcols])),] -> data
 
   if(is.null(crs)) {
-    crs <- creapuff.env$llproj
+    crs <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
     warning("assuming lat-lon WGS84 coordinate system")
   }
 
