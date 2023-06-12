@@ -118,8 +118,16 @@ statmode <- function(x, na.rm = FALSE) {
 }
 
 is.outlier <- function(x, SDs=10,na.rm=F) {
-  abs((x - mean(x, na.rm=na.rm)) / sd(x, na.rm = na.rm)) -> devs
-  return(is.na(devs) | devs > SDs)
+  warning('This is the old version of the function, maintained for backward compatibility, which uses standard deviations from mean as the criterion. Please switch to using is_outlier.')
+  is_outlier(x, deviation_threshold=SDs, na.rm=na.rm, FUN=mean)
+}
+
+is_outlier <- function(x, deviation_threshold=10, na.rm=F, FUN=median) {
+  mean_value <- FUN(x, na.rm=na.rm)
+  deviations <- abs(x - mean_value)
+  mean_deviation <- FUN(deviations, na.rm=na.rm)
+  relative_deviations <- deviations/mean_deviation
+  return(is.na(relative_deviations) | relative_deviations > deviation_threshold)
 }
 
 mean.maxna <- function(x,maxna) {
