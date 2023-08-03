@@ -138,7 +138,7 @@ mean.maxna <- function(x,maxna) {
 cluster <- function(sp, distKM) {
   require(sp)
   require(geosphere)
-  sp <- spdf(sp)
+  sp <- to_spdf(sp)
   hc <- sp %>% coordinates %>% distm %>% as.dist %>% hclust
   cutree(hc,h=distKM*1000)
 }

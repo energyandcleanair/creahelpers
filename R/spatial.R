@@ -225,7 +225,7 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
   }
 
   if(class(crs) == "character")
-    crs <- CRS(crs)
+    crs <- sp::CRS(crs)
 
   return(SpatialPointsDataFrame(coords = data[,llcols],data=data,proj4string = crs))
 }
@@ -233,8 +233,13 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
 to_sf_points <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
 
   if('sf' %in% class(data)) {
-    warning('Data is already of type sf')
+    message('Data is already of type sf')
     return(data)
+  }
+
+  if(any(grepl('^Spatial',class(data)))) {
+    message('Converting from type Spatial*')
+    return(sf::st_as_sf(data))
   }
 
   if(all(class(data) != 'data.frame')){
