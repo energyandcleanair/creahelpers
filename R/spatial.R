@@ -2,8 +2,8 @@
 #'
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
 #' @export
-get_crs_par = function(crsstring, parname) {
-  search_string = paste0('.*\\+',parname,'=')
+get_crs_par <- function(crsstring, parname) {
+  search_string <- paste0('.*\\+',parname,'=')
   if(grepl(search_string, crsstring)) {
     crsstring %>% gsub(search_string, '', .) %>% gsub(' .*', '', .)
   } else return(as.character(NA))
@@ -17,42 +17,42 @@ get_crs_par = function(crsstring, parname) {
 #' This function takes an object that has a crs and converts it back to UTM/
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
 #' @export
-fixproj = function(x) {
-  crs0 = crs(x)
+fixproj <- function(x) {
+  crs0 <- crs(x)
   if(grepl("\\+proj=tmerc", crs0)) {
-    UTMZ = get_crs_par(crs0, 'lon_0') %>% as.numeric %>% add(177) %>% divide_by(6) %>% add(1)
-    UTMH = ifelse(get_crs_par(crs0, 'y_0')=='0', '', ' +south')
-    u = get_crs_par(crs0, 'units')
-    datum=get_crs_par(crs0, 'datum')
-    if(is.na(datum)) datum='WGS84'
-    crs(x)=paste0("+proj=utm +datum=",datum,
-                  " +no_defs +zone=",UTMZ,UTMH,
-                  " +units=",u)
+    UTMZ <- get_crs_par(crs0, 'lon_0') %>% as.numeric %>% add(177) %>% divide_by(6) %>% add(1)
+    UTMH <- ifelse(get_crs_par(crs0, 'y_0')=='0', '', ' +south')
+    u <- get_crs_par(crs0, 'units')
+    datum <- get_crs_par(crs0, 'datum')
+    if(is.na(datum)) datum <- 'WGS84'
+    crs(x) <- paste0("+proj=utm +datum=", datum,
+                     " +no_defs +zone=", UTMZ, UTMH,
+                     " +units=", u)
   }
   return(x)
 }
-
 
 
 #' Alternative for raster::projectExtent that works with UTM with +units=km
 #'
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
 #' @export
-projectExtent2 = function(r, targetcrs, ...) {
-  r %>% extent() -> bb
-  bb %>% as('SpatialPolygons') -> bbpol
-  crs(bbpol) = crs(r)
-  bbpol %>% spTransform(crs(targetcrs)) %>% extent %>% raster(...) -> r.out
-  crs(r.out) = targetcrs
+projectExtent2 <- function(r, targetcrs, ...) {
+  bb <- r %>% extent()
+  bbpol <- bb %>% as('SpatialPolygons')
+  crs(bbpol) <- crs(r)
+  r.out <- bbpol %>% spTransform(crs(targetcrs)) %>% extent %>% raster(...)
+  crs(r.out) <- targetcrs
   return(r.out)
 }
+
 
 #' Alternative for sp::spTransform that works with UTM with +units=km
 #'
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
 #' @export
-spTransform2 = function(obj, targetcrs, ...) {
-  if(grepl('\\+units=km', targetcrs)) obj %<>% spTransform(gsub('\\+units=km', '\\+units=m', targetcrs, ...))
+spTransform2 <- function(obj, targetcrs, ...) {
+  if(grepl('\\+units=km', targetcrs)) obj <- obj %>% spTransform(gsub('\\+units=km', '\\+units=m', targetcrs, ...))
   obj %>% spTransform(targetcrs, ...)
 }
 
@@ -68,19 +68,22 @@ spTransform2 = function(obj, targetcrs, ...) {
 #' @param expand Factor by which to expand the extent before cropping
 #'
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @author Danny Hartono \email{danny@@energyandcleanair.org}
 #' @export
-cropProj <- function(shapeobj, rasterobj, expand=1.25, ...) {
-  bb = rasterobj %>% projectExtent2(crs(shapeobj)) %>%
-    extent %>% multiply_by(expand)
-  shapeobj %<>% crop(bb)
+cropProj <- function(shapeobj, rasterobj, expand = 1.25, ...) {
+  bb <- rasterobj %>% projectExtent2(crs(shapeobj)) %>% extent %>%
+    multiply_by(expand)
+  shapeobj <- shapeobj %>% crop(bb)
   if(grepl("Raster", class(shapeobj))) {
-    shapeobj %>% projectRaster(rasterobj, ...) %>% return
-  } else shapeobj %>% spTransform2(crs(rasterobj)) %>% return
+    result <- try(shapeobj %>% projectRaster(rasterobj, ...))
+    if(inherits(result, "try-error")) { # use terra if raster fails, convert back to raster
+      result <- project(rast(shapeobj), rast(rasterobj), ...) %>% raster
+    }
+    return(result)
+  } else {
+    shapeobj %>% spTransform2(crs(rasterobj)) %>% return
+  }
 }
-
-
-
-
 
 
 #' Simplify administrative area boundaries
@@ -93,11 +96,11 @@ cropProj <- function(shapeobj, rasterobj, expand=1.25, ...) {
 #' @return SpatialPolygonsDataFrame
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
 #' @export
-simplify_adm = function(level=0, resname='low', version='410', method) {
+simplify_adm <- function(level = 0, resname = 'low', version = '410', method) {
 
   print(method)
 
-  get_adm(level, res='full', version) -> adm
+  adm <- get_adm(level, res='full', version)
 
   adm_sf_coarse <- rmapshaper::ms_simplify(input = as(adm, 'SpatialPolygonsDataFrame')) %>% sf::st_as_sf()
 
@@ -105,15 +108,15 @@ simplify_adm = function(level=0, resname='low', version='410', method) {
   # adm_sf %>% sf::st_simplify(dTolerance = tol) -> adm_sf_coarse
   # adm %>% sf::st_as_sf() -> adm_sf
   # creahelpers::to_spdf(adm) -> adm_sp
-  if(method=='rgeos'){
-    if(resname=='low'){
-      tol=.005
-      threshold_km2=25
+  if(method == 'rgeos') {
+    if(resname == 'low') {
+      tol <- .005
+      threshold_km2 <- 5
     }
 
-    if(resname=='coarse'){
-      tol=.05
-      threshold_km2=250
+    if(resname == 'coarse'){
+      tol <- .05
+      threshold_km2 <- 250
     }
 
     # RGEOS approach
@@ -124,21 +127,21 @@ simplify_adm = function(level=0, resname='low', version='410', method) {
     adm_simplified <- remove_small_polygons(adm_simplified, threshold_km2 = threshold_km2)
   }
 
-  if(method=='rmapshaper'){
+  if(method == 'rmapshaper'){
     # Trying to fix orphaned holes in R
-    adm <- rgeos::gBuffer(adm, byid=T, width=0)
+    adm <- rgeos::gBuffer(adm, byid = T, width = 0)
 
     # RMAPSHAPER approach
-    if(resname=='low') keep=.1
-    if(resname=='coarse') keep=.05
+    if(resname == 'low') keep <- .1
+    if(resname == 'coarse') keep <- .05
 
-    adm_simplified <- rmapshaper::ms_simplify(input = adm, keep=keep, sys=T)
+    adm_simplified <- rmapshaper::ms_simplify(input = adm, keep = keep, sys = T)
   }
 
   adm_simplified_sf <- sf::st_as_sf(adm_simplified)
 
-  f = get_boundaries_path(paste0('gadm/gadm',version,'_',level,'_',resname,'_',method,'.gpkg'))
-  sf::st_write(sf::st_as_sf(adm_simplified_sf), f, overwrite=T, append=F)
+  f <- get_boundaries_path(paste0('gadm/gadm', version, '_', level, '_', resname, '_', method, '.gpkg'))
+  sf::st_write(sf::st_as_sf(adm_simplified_sf), f, overwrite = T, append = F)
   adm_simplified <- sf::read_sf(f) %>% creahelpers::to_spdf()
   saveRDS(adm_simplified, gsub('\\.gpkg', '.RDS', f))
   return(adm_simplified)
@@ -156,13 +159,13 @@ remove_small_polygons <- function(spdf, threshold_km2){
   # Threshold: A tenth of Luxembourg ~ 250km2
   # areas <- rgeos::gArea(adm_simplified, byid = TRUE)
   spdf_dis_vect <- terra::vect(spdf_dis)
-  areas <- terra::expanse(spdf_dis_vect, unit='km')
+  areas <- terra::expanse(spdf_dis_vect, unit = 'km')
   # threshold <- 250 #areas[which(adm_simplified_vect$GID_0=='LUX')] %>% sum() / 10
   spdf_dis_vect <- spdf_dis_vect[which(areas >= threshold_km2)]
 
   # Re aggregate
   spdf_dis <- as(spdf_dis_vect, "Spatial")
-  spdf <- aggregate(spdf_dis, by=names(spdf_dis))
+  spdf <- aggregate(spdf_dis, by = names(spdf_dis))
   return(spdf)
 }
 
@@ -170,23 +173,24 @@ remove_small_polygons <- function(spdf, threshold_km2){
 identify_coordinate_columns <- function(data) {
   llcols <- unlist(sapply(c("^longitude","^latitude"), grep,tolower(names(data))))
 
-  if(length(llcols)!=2)
-    llcols <- unlist(sapply(c("^lon","^lat"), grep, tolower(names(data))))
+  if(length(llcols) != 2)
+    llcols <- unlist(sapply(c("^lon", "^lat"), grep, tolower(names(data))))
 
-  if(length(llcols)!=2)
-    llcols <- unlist(sapply(c("x","y"),function(str) { which(str == tolower(names(data))) }))
+  if(length(llcols) != 2)
+    llcols <- unlist(sapply(c("x", "y"), function(str) {which(str == tolower(names(data)))}))
 
-  if(length(llcols)!=2)
-    llcols <- unlist(sapply(c("^x","^y"), grep, tolower(names(data))))
+  if(length(llcols) != 2)
+    llcols <- unlist(sapply(c("^x", "^y"), grep, tolower(names(data))))
 
-  if(length(llcols)<2)
+  if(length(llcols) < 2)
     stop("could not identify coordinate columns, need to start with lat, lon or x, y")
 
-  if(length(llcols)>2)
+  if(length(llcols) > 2)
     stop("could not identify coordinate columns, too many starting with lat, lon or x, y")
 
   return(llcols)
 }
+
 
 #' Convert to spatialpointsdataframe
 #'
@@ -199,25 +203,25 @@ identify_coordinate_columns <- function(data) {
 #' @export
 #'
 #' @examples
-to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
+to_spdf <- function(data, crs = NULL, llcols = NULL, na.action = na.omit) {
 
-  if(any(grepl('^Spatial',class(data)))) {
+  if(any(grepl('^Spatial', class(data)))) {
     warning('Data is already of type Spatial*')
     return(data)
   }
 
-  if(class(data)[1]=="sf"){
+  if(class(data)[1] == "sf"){
     return(as(data, "Spatial"))
   }
 
   if(all(class(data) != 'data.frame')){
-    as.data.frame(data) -> data
+    data <- as.data.frame(data)
   }
 
   if(is.null(llcols)) llcols <- identify_coordinate_columns(data)
 
   if(anyNA(data[,llcols])) warning("NAs in coordinates")
-  data[row.names(na.action(data[,llcols])),] -> data
+  data <- data[row.names(na.action(data[,llcols])),]
 
   if(is.null(crs)) {
     crs <- "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
@@ -227,10 +231,11 @@ to_spdf <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
   if(class(crs) == "character")
     crs <- CRS(crs)
 
-  return(SpatialPointsDataFrame(coords = data[,llcols],data=data,proj4string = crs))
+  return(SpatialPointsDataFrame(coords = data[,llcols], data = data, proj4string = crs))
 }
 
-to_sf_points <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
+
+to_sf_points <- function(data, crs = NULL, llcols = NULL, na.action = na.omit) {
 
   if('sf' %in% class(data)) {
     warning('Data is already of type sf')
@@ -238,20 +243,20 @@ to_sf_points <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
   }
 
   if(all(class(data) != 'data.frame')){
-    tibble::as_tibble(data) -> data
+    data <- tibble::as_tibble(data)
   }
 
   if(is.null(llcols)) llcols <- identify_coordinate_columns(data)
 
   if(anyNA(data[,llcols])) warning("NAs in coordinates")
-  data[row.names(na.action(data[,llcols])),] -> data
+  data <- data[row.names(na.action(data[,llcols])),]
 
   if(is.null(crs)) {
     crs <- 4326
     warning("assuming lat-lon WGS84 coordinate system")
   }
 
-  sf::st_as_sf(data, coords=llcols, crs=crs)
+  sf::st_as_sf(data, coords = llcols, crs = crs)
 }
 
 
@@ -265,9 +270,9 @@ to_sf_points <- function(data, crs=NULL, llcols=NULL, na.action=na.omit) {
 #'
 #' @examples
 to_raster <- function(x){
-  if(class(x)[1]!="RasterLayer"){
+  if(class(x)[1] != "RasterLayer") {
     raster(x)
-  }else{
+  } else {
     x
   }
 }
@@ -281,66 +286,66 @@ to_raster <- function(x){
 #' @export
 #'
 #' @examples
-to_rast <- function(x){
-  if(class(x)[1]!="SpatRaster"){
+to_rast <- function(x) {
+  if(class(x)[1] != "SpatRaster") {
     terra::rast(x)
-  }else{
+  } else {
     x
   }
 }
 
-focal.loop <- function(r, w, fun, filename=raster::rasterTmpFile(), ...) {
+focal.loop <- function(r, w, fun, filename = raster::rasterTmpFile(), ...) {
 
-  #compile in hopes of speeding up
+  # compile in hopes of speeding up
   cmp_fun <- compiler::cmpfun(fun)
 
   bs <- raster::blockSize(r)
 
-  #adjust chunksize down to account for extra "padding" rows
+  # adjust chunksize down to account for extra "padding" rows
   bs <- raster::blockSize(r, chunksize = ncol(r) * (bs$nrows[1]-dim(w)[1]))
 
   #initialize
   r.out <- raster(r)
-  r.out <- raster::writeStart(r.out, filename=filename, overwrite=TRUE)
-  pad.rows = (dim(w)[2]-1)/2 #number of rows to add above and below
+  r.out <- raster::writeStart(r.out, filename = filename, overwrite = TRUE)
+  pad.rows <- (dim(w)[2] - 1) / 2 # number of rows to add above and below
   for(i in 1:bs$n) {
-    #calculate number of padding rows, avoid trying to read outside raster
-    padUp = min(c(bs$row[i]-1, pad.rows))
-    padDown = min(c(nrow(r) - bs$row[i] - bs$nrows[i] + 1, pad.rows))
+    # calculate number of padding rows, avoid trying to read outside raster
+    padUp <- min(c(bs$row[i] - 1, pad.rows))
+    padDown <- min(c(nrow(r) - bs$row[i] - bs$nrows[i] + 1, pad.rows))
 
-    #read a chunk of rows and convert to matrix
+    # read a chunk of rows and convert to matrix
     raster::getValues(r, bs$row[i] - padUp,
               bs$nrows[i] + padUp + padDown) %>%
-      matrix(ncol=ncol(r), byrow=T) -> r.sub
+      r.sub <- matrix(ncol = ncol(r), byrow = T)
 
-    #convert to raster, run focal and convert to vector for writing
+    # convert to raster, run focal and convert to vector for writing
     r.sub %>% raster %>%
       raster::focal(w=w,fun=cmp_fun, ...) %>%
-      matrix(ncol=ncol(r), byrow=T) -> r.sub
-    r.sub[(padUp+1):(nrow(r.sub)-padDown),] %>%
-      t %>% as.vector-> r.sub
+      r.sub <- matrix(ncol = ncol(r), byrow = T)
+    r.sub <- r.sub[(padUp + 1):(nrow(r.sub) - padDown),] %>%
+      t %>% as.vector
 
-    #write the rows back
+    # write the rows back
     r.out <- raster::writeValues(r.out, r.sub, bs$row[i])
-    cat('\rprocessed chunk ', i,' out of ', bs$n)
+    cat('\rprocessed chunk ', i, ' out of ', bs$n)
   }
-  #save and exit
+  # save and exit
   r.out <- raster::writeStop(r.out)
   return(r.out)
 }
 
 focalcircle <- function(r, d,
-                        fun=function(x) weighted.mean(x, fw.c, na.rm=T),
+                        fun = function(x) weighted.mean(x, fw.c, na.rm = T),
                         ...) {
-  fw.r=raster::focalWeight(r, d=d, type="rectangle")
-  fw.c=raster::focalWeight(r, d=d, type="circle")
+  fw.r <- raster::focalWeight(r, d = d, type = "rectangle")
+  fw.c <- raster::focalWeight(r, d = d, type = "circle")
   fw.r[,] <- 1
-  fw.c[fw.c>0] <- 1
-  focal.loop(r, w=fw.r, pad=T, fun=fun, ...)
+  fw.c[fw.c > 0] <- 1
+  focal.loop(r, w = fw.r, pad = T, fun = fun, ...)
 }
 
 
-rasterize_lines <- function(lines, grid){
+rasterize_lines <- function(lines, grid) {
 
   if(is.na(crs(lines)))
   lines <- to_spdf(lines)
@@ -379,11 +384,11 @@ rasterize_lines <- function(lines, grid){
                               }) %>%
         do.call("bind_rows",.)
       cutting_successful <- T
-    }, error=function(e){
-      if("size exceeded" %in% as.character(e)){
+    }, error = function(e) {
+      if("size exceeded" %in% as.character(e)) {
         chunk_size <- chunk_size / 100
         warning("Cutting failed: ", e, "\n Trying with smaller chunk size", )
-      }else{
+      } else {
         stop(e)
       }
     })
@@ -392,7 +397,7 @@ rasterize_lines <- function(lines, grid){
   print("Done")
 
   print("Calculating length...")
-  rp$length <- sf::st_length(rp, byid=TRUE)
+  rp$length <- sf::st_length(rp, byid = TRUE)
   print("Done")
 
   # # Weighting accordingly
@@ -404,8 +409,8 @@ rasterize_lines <- function(lines, grid){
 
   print("Rasterizing...")
   rp.sum <- rp %>%
-    group_by(i_cell=as.integer(i_cell)) %>%
-    summarise(length=sum(length, na.rm=T))
+    group_by(i_cell = as.integer(i_cell)) %>%
+    summarise(length = sum(length, na.rm = T))
 
   # Print into raster directly!
    cells_x <- rep(0,ncell(rs))
@@ -415,6 +420,7 @@ rasterize_lines <- function(lines, grid){
 
   return(grid_result)
 }
+
 
 #' Buffer a sf without overlapping amongst features. Mainly useful
 #' to extend region boundaries into sea
@@ -426,15 +432,14 @@ rasterize_lines <- function(lines, grid){
 #' @export
 #'
 #' @examples
-buffer <- function(g_sf, buffer_km, id_col, grouping_cols){
+buffer <- function(g_sf, buffer_km, id_col, grouping_cols) {
 
     g_coast <- cartomisc::regional_seas(g_sf %>% sf::st_transform(3857),
-                                        group=id_col,
-                                        dist=buffer_km*1000) %>%
+                                        group = id_col,
+                                        dist = buffer_km * 1000) %>%
       left_join(g %>% as.data.frame() %>% dplyr::select(id, name, province))
 
-    g_sf <-  bind_rows(g_sf %>% sf::st_transform(3857),
-                    g_coast) %>%
+    g_sf <- bind_rows(g_sf %>% sf::st_transform(3857), g_coast) %>%
       # st_snap(x = ., y = ., tolerance = 0.0001) %>% # for sliver polygons but too slow
       group_at(grouping_cols) %>%
       summarise() %>%
