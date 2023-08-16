@@ -4,7 +4,8 @@ Title: What the Package Does (Title Case)
 Version: 0.1.0
 Authors@R: c(
     person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("cre","aut")),
-    person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("aut"))
+    person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("aut")),
+    person("Danny", "Hartono", email = "danny@energyandcleanair.org", role = c("aut"))
     )
 Maintainer: Hubert Thieriot <hubert@energyandcleanair.org>
 Description: Helper functions used across CREA packages
