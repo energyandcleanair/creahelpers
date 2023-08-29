@@ -68,3 +68,6 @@ importFrom(raster,projectExtent)
 importFrom(raster,projectRaster)
 
 importFrom(sp,spTransform)
+
+importFrom(terra,project)
+importFrom(terra,rast)
