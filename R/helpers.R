@@ -305,3 +305,35 @@ read_bp <- function(file_path,
   if(!read_multiple) d.out <- d.out[[1]]
   return(d.out)
 }
+
+#clean up memory, interactively choosing which objects to delete
+cleanup <- function(protect,threshold=1) {
+  sort( sapply(ls(envir = .GlobalEnv),function(x){object.size(get(x))}),decreasing = T)/1e6 -> memsizes
+  trash <- rep(F,length(memsizes))
+
+  for(o in which(memsizes>threshold)) {
+    print(paste0("total memory size: ",round(sum(memsizes[!trash]),1),"Mb"))
+    print(paste0(ifelse(o==1,"","next "),"largest object: ",names(memsizes)[o],", ",round(memsizes[o],1),"Mb"))
+    readline("remove y/n/q ") -> reply
+    if(substr(reply,1,1) %in% c("", "q")) break()
+
+    if(substr(reply,1,1) == "y") trash[o] <- T
+  }
+
+  if(sum(trash==T)==0) return()
+
+  rmObjs <- names(memsizes[trash])
+  print(paste("removing",paste(rmObjs,collapse=" ")))
+  readline("continue y/n ") -> reply2
+  #rmObjs <- names(memsizes[memsizes>10e6 & !(names(memsizes) %in% c(protectObjects,"total"))])
+  if(substr(reply2,1,1) == "y") rm(list=rmObjs, envir = .GlobalEnv)
+}
+
+#paste an Excel table from clipboard into a data.frame
+paste.xl <- function(header=T, ...)
+  read.table('clipboard', sep='\t', header=header, ...)
+
+#copy a data.frame as a string that can be pasted into an Excel spreadsheet
+copy.xl <- function(df, col.names=T, quote=F, row.names=F, ...)
+  write.table(df, 'clipboard', sep='\t',
+              col.names=col.names, quote=quote, row.names=row.names, ...)
