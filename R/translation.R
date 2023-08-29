@@ -1,9 +1,15 @@
 #translation and language functions
+try_get <- function(object_name, default_value, envir=.GlobalEnv, ...) {
+  x <- Sys.getenv(object_name)
+  if(x=='') x <- default_value
+  try(x <- get(object_name, envir=envir, ...), silent = T)
+  return(x)
+}
 
 #translate using a pre-provided lookup table
 trans <- function(x,
-                  lang=get("lang", .GlobalEnv),
-                  trans_file = 'data/label_translations.xlsx',
+                  lang=try_get("lang", "EN"),
+                  trans_file = try_get('trans_file', 'data/label_translations.xlsx'),
                   wrap_chars=NULL,
                   ignore.case=T,
                   ignore.non.ascii=T,
