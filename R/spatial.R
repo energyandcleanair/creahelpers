@@ -427,6 +427,14 @@ rasterize_lines <- function(lines, grid) {
 }
 
 
+cluster <- function(sp, distKM) {
+  require(sp)
+  require(geosphere)
+  sp <- to_spdf(sp)
+  hc <- sp %>% coordinates %>% distm %>% as.dist %>% hclust
+  cutree(hc,h=distKM*1000)
+}
+
 #' Buffer a sf without overlapping amongst features. Mainly useful
 #' to extend region boundaries into sea
 #'

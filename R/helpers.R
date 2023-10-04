@@ -135,13 +135,6 @@ mean.maxna <- function(x,maxna) {
   } else return(mean(x,na.rm=T))
 }
 
-cluster <- function(sp, distKM) {
-  require(sp)
-  require(geosphere)
-  sp <- to_spdf(sp)
-  hc <- sp %>% coordinates %>% distm %>% as.dist %>% hclust
-  cutree(hc,h=distKM*1000)
-}
 
 
 na.cover <- function(x, x.new) { ifelse(is.na(x), x.new, x) }
@@ -253,7 +246,24 @@ read_wide_xlsx <- function(path, sheet=NULL,
   }
 }
 
+#rolling mean for data by date
+rollmean_date <- function(x, dates, width=7) {
+  x.out <- x
+  x.out[] <- NA
+  for(i in 1:length(x))
+    x.out[i] <- sum(x[dates %in% (dates[i]-0:(width-1))], na.rm=T)/width
+  return(x.out)
+}
 
+#year-on-year changes from data by date
+get_yoy <- function(x, date) {
+  warning('the get_yoy function is available in creahelpers and being deprecated here')
+
+  lastyr <- date
+  year(lastyr) %<>% subtract(1)
+  ind = match(lastyr, date)
+  x / x[ind] - 1
+}
 
 #read the BP Statistical Review data
 read_bp <- function(file_path,
