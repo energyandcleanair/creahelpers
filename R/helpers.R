@@ -255,16 +255,6 @@ rollmean_date <- function(x, dates, width=7) {
   return(x.out)
 }
 
-#year-on-year changes from data by date
-get_yoy <- function(x, date) {
-  warning('the get_yoy function is available in creahelpers and being deprecated here')
-
-  lastyr <- date
-  year(lastyr) %<>% subtract(1)
-  ind = match(lastyr, date)
-  x / x[ind] - 1
-}
-
 #read the BP Statistical Review data
 read_bp <- function(file_path,
                     sheet_name=NULL,
