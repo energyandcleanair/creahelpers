@@ -9,7 +9,7 @@ try_get <- function(object_name, default_value, envir=.GlobalEnv, ...) {
 #translate using a pre-provided lookup table
 trans <- function(x,
                   lang=try_get("lang", "EN"),
-                  trans_file = try_get('trans_file', 'data/label_translations.xlsx'),
+                  trans_file = try_get('trans_file', system.file("data", "label_translations.xlsx", package = "creahelpers")),
                   wrap_chars=NULL,
                   ignore.case=T,
                   ignore.non.ascii=T,

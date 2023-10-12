@@ -171,18 +171,26 @@ orderfactor <- function(var, by) {
 }
 
 
-expand_dates <- function(df, datecol='date', targetdates=NULL) {
+expand_dates <- function(df, datecol='date', targetdates=NULL, fill=NA, vars_to_avg=NULL) {
+
   groupvarlist <- df %>% select(all_of(dplyr::group_vars(df))) %>% as.list() %>% lapply(unique)
 
   if(is.null(targetdates))
     targetdates <- seq.Date(min(df[[datecol]]),
                             max(df[[datecol]]),
-                            by='day')
+                            by="day")
 
   if(!is.list(targetdates)) targetdates %<>% list
 
+  if(!is.na(fill) & !is.list(fill)){
+    fill_cols <- ifelse(is.null(vars_to_avg), names(df)[sapply(df, is.numeric)], vars_to_avg)
+    fill_values <- setNames(as.list(rep(fill, length(fill_cols))), fill_cols)
+  }else{
+    fill_values <- list(NA)
+  }
+
   names(targetdates) <- datecol
-  full_join(df, expand.grid(c(groupvarlist, targetdates)))
+  tidyr::complete(df, !!!targetdates, fill=fill_values)
 }
 
 get_yoy <- function(x, date) {
@@ -191,6 +199,7 @@ get_yoy <- function(x, date) {
   ind = match(lastyr, date)
   x / x[ind] - 1
 }
+
 
 x_at_zero <- function(headroom=.05, ...) {
   list(ggplot2::scale_y_continuous(expand=ggplot2::expansion(mult=c(0,headroom)), ...),
@@ -340,3 +349,49 @@ paste.xl <- function(header=T, ...)
 copy.xl <- function(df, col.names=T, quote=F, row.names=F, ...)
   write.table(df, 'clipboard', sep='\t',
               col.names=col.names, quote=quote, row.names=row.names, ...)
+
+#' A rolling average function that completes date
+#' and fill numerical values with NA or user-specified value
+#'
+#' User can specify a minimal number of non NA values for average to be valid.
+#'
+#' @param df
+#' @param average_width
+#' @param average_by
+#' @param date_col
+#' @param vars_to_avg
+#' @param fill
+#' @param min_values
+#'
+#' @return
+#' @export
+#'
+#' @examples
+rolling_average <- function(df,
+                            average_width,
+                            average_by ="day",
+                            datecol="date",
+                            vars_to_avg=grep('^value', names(df), value = T),
+                            fill=NA,
+                            min_values = NULL){
+
+  if(average_width == 0){return(df)}
+
+  mean_fn <- function(x) {
+    if(!is.null(min_values) && sum(!is.na(x)) < min_values) {
+      return(NA)
+    }
+    mean(x, na.rm = T)
+  }
+
+  train_roll_fn <- function(var){
+    zoo::rollapply(var, width = average_width,
+                   FUN = mean_fn, align = "right", fill = NA)
+  }
+
+  df %>%
+    expand_dates(datecol=datecol,
+                 fill=fill,
+                 vars_to_avg=vars_to_avg) %>%
+    mutate_at(vars_to_avg, train_roll_fn)
+}

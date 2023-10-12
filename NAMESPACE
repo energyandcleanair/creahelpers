@@ -67,6 +67,9 @@ importFrom(raster,values)
 importFrom(raster,projectExtent)
 importFrom(raster,projectRaster)
 
+importFrom(readxl, read_xls)
+importFrom(readxl, read_xlsx)
+
 importFrom(sp,spTransform)
 
 importFrom(terra,project)
