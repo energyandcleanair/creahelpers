@@ -255,6 +255,9 @@ rollmean_date <- function(x, dates, width=7) {
   return(x.out)
 }
 
+#equals operator that treats NA's as a value to be compared instead of returning NA
+'%eqna%' <- function(x, y) (!is.na(x) & !is.na(y) & x==y) | (is.na(x) & is.na(y))
+
 #read the BP Statistical Review data
 read_bp <- function(file_path,
                     sheet_name=NULL,
