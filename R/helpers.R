@@ -395,3 +395,12 @@ rolling_average <- function(df,
                  vars_to_avg=vars_to_avg) %>%
     mutate_at(vars_to_avg, train_roll_fn)
 }
+
+
+#Get a list of OECD member countries in specified format
+oecd_members <- function(format='iso2c') {
+  countrycode::countrycode(scan(textConnection(
+    "Austria, Australia, Belgium, Canada, Chile, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Israel, Italy, Japan, Korea, Latvia, Lithuania, Luxembourg, Mexico, the Netherlands, New Zealand, Norway, Poland, Portugal, Slovak Republic, Slovenia, Spain, Sweden, Switzerland, Turkey, United Kingdom, United States"),
+    character(), sep=','),
+    'country.name.en', format)
+}
