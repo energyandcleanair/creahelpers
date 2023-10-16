@@ -9,11 +9,19 @@ try_get <- function(object_name, default_value, envir=.GlobalEnv, ...) {
 #translate using a pre-provided lookup table
 trans <- function(x,
                   lang=try_get("lang", "EN"),
-                  trans_file = try_get('trans_file', system.file("data", "label_translations.xlsx", package = "creahelpers")),
+                  trans_file = try_get('trans_file', 'inst/extdata/label_translations.xlsx'),
                   wrap_chars=NULL,
                   ignore.case=T,
                   ignore.non.ascii=T,
                   when_missing='warn') {
+
+  if(!file.exists(trans_file)) {
+    trans_file <- 'data/label_translations.xlsx'
+    if(!file.exists(trans_file)) stop('Translation file not found. Provide an xlsx file at
+                                      inst/extdata/label_translations.xlsx, data/label_translations.xlsx or
+                                      at a custom path specified as trans_file argument or variable.')
+    warning('File specified in the trans_file argument not found, using data/label_translations.xlsx.')
+  }
 
   if(lang=='EN') return(x)
 
