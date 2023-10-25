@@ -54,8 +54,8 @@ trans <- function(x,
     if(when_missing=='stop') stop(msg)
   }
 
-  if(is.character(x)) x %<>% recode(!!!dictvect)
-  if(is.factor(x)) x %<>% recode_factor(!!!dictvect, .ordered=T)
+  if(is.character(x)) x %<>% dplyr::recode(!!!dictvect)
+  if(is.factor(x)) x %<>% dplyr::recode_factor(!!!dictvect, .ordered=T)
 
   x
 }
