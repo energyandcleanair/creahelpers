@@ -1,6 +1,22 @@
 sel <- dplyr::select
 
+#' Return true for all values of x that are NOT included in y
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
 '%notin%' <- function(x,y)!('%in%'(x,y))
+
+#' Return a vector of the values of x that are included in y
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
+'%whichin%' <- function(x,y) x[x %in% y]
+
+#' Return a vector of the values of x that are NOT included in y
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
+'%whichnotin%' <- function(x,y) x[x %notin% y]
 
 #' Capitalize the first letter of each word
 #'
