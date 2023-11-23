@@ -206,7 +206,7 @@ x_at_zero <- function(headroom=.05, ...) {
        ggplot2::expand_limits(y=0))
 }
 
-#function to read in an excel file with multiple header rows, either combining into one row (wide=T) or pivoting longer
+#function to read in an excel file with multiple header rows, either combining into one header row (wide=T) or pivoting longer
 silent_read <- function(...) suppressMessages(read_xlsx(...))
 
 read_wide_xlsx <- function(path, sheet=NULL,
@@ -214,6 +214,7 @@ read_wide_xlsx <- function(path, sheet=NULL,
                            skip=0,
                            info_columns=1,
                            header_row_names=paste0('V', 1:header_rows),
+                           fill_header_rows=T,
                            stop_at_blank_row=T, discard_empty_columns=T,
                            wide_format=F,
                            ...) {
@@ -225,16 +226,18 @@ read_wide_xlsx <- function(path, sheet=NULL,
     data %<>% slice_head(n=first_empty_row-1)
   }
 
+
   if(discard_empty_columns) {
     empty_columns <- data %>% apply(2, function(x) sum(!is.na(x))) %>% equals(0) %>% which
-    data %<>% select(-all_of(empty_columns))
-  }
+  } else empty_columns <- NULL
 
-  header %>% t %>% as_tibble() %>%
-    fill(everything(), .direction='down') %>%
+  header %>% t %>% as_tibble() -> header_df
+
+  if(fill_header_rows) header_df %<>% fill(everything(), .direction='down')
+
+  header_df %<>%
     apply(1, function(x) x %>% na.omit %>% matrix(nrow=1) %>% as_tibble) %>%
-    bind_rows() ->
-    header_df
+    bind_rows()
 
   header_df %>% select(matches('^V[0-9]+$')) %>%
     apply(1, function(x) x %>% na.omit %>% paste(collapse='_')) ->
@@ -243,16 +246,32 @@ read_wide_xlsx <- function(path, sheet=NULL,
   if(!is.null(header_row_names)) names(header_df) <- header_row_names
   header_df %<>% mutate(col=names(header))
 
-  if(wide_format) names(data) <- header_colnames
+  if(wide_format) {
+    names(data) <- header_colnames
+    data %<>% select(-all_of(empty_columns))
+  }
 
   if(!wide_format) {
-    names(data)[info_columns] <- header_colnames[info_columns]
+    info_columns %<>% setdiff(empty_columns)
+    info_column_names <- header_colnames[info_columns]
+    names(data)[info_columns] <- info_column_names
 
-    data %>%
-      mutate(across(-all_of(info_columns), as.character)) %>%
-      pivot_longer(-all_of(info_columns), names_to='col') %>%
+    data %<>% select(-all_of(empty_columns))
+
+    data %<>%
+      mutate(across(-all_of(info_column_names), as.character)) %>%
+      pivot_longer(-all_of(info_column_names), names_to='col') %>%
       right_join(header_df, .) %>% select(-col)
+
+    if(all(!is.na(data$value) | is.na(data$value))) data$value %<>% as.numeric
   }
+  return(data)
+}
+
+as.numeric_print_NAs <- function(x) {
+  x_out <- x[!is.na(x) & is.na(as.numeric(x))]
+  if(length(x_out)>0) message('not converted: ', x_out)
+  x
 }
 
 #rolling mean for data by date
