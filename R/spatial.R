@@ -318,17 +318,18 @@ focal.loop <- function(r, w, fun, filename = raster::rasterTmpFile(), ...) {
     padUp <- min(c(bs$row[i] - 1, pad.rows))
     padDown <- min(c(nrow(r) - bs$row[i] - bs$nrows[i] + 1, pad.rows))
 
-    # read a chunk of rows and convert to matrix
+    #read a chunk of rows and convert to matrix
     raster::getValues(r, bs$row[i] - padUp,
-              bs$nrows[i] + padUp + padDown) %>%
-      r.sub <- matrix(ncol = ncol(r), byrow = T)
+                      bs$nrows[i] + padUp + padDown) %>%
+      matrix(ncol=ncol(r), byrow=T) -> r.sub
+
 
     # convert to raster, run focal and convert to vector for writing
     r.sub %>% raster %>%
       raster::focal(w=w,fun=cmp_fun, ...) %>%
-      r.sub <- matrix(ncol = ncol(r), byrow = T)
-    r.sub <- r.sub[(padUp + 1):(nrow(r.sub) - padDown),] %>%
-      t %>% as.vector
+      matrix(ncol=ncol(r), byrow=T) -> r.sub
+    r.sub[(padUp+1):(nrow(r.sub)-padDown),] %>%
+      t %>% as.vector-> r.sub
 
     # write the rows back
     r.out <- raster::writeValues(r.out, r.sub, bs$row[i])
