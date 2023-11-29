@@ -1,6 +1,22 @@
 sel <- dplyr::select
 
+#' Return true for all values of x that are NOT included in y
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
 '%notin%' <- function(x,y)!('%in%'(x,y))
+
+#' Return a vector of the values of x that are included in y
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
+'%whichin%' <- function(x,y) x[x %in% y]
+
+#' Return a vector of the values of x that are NOT included in y
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
+'%whichnotin%' <- function(x,y) x[x %notin% y]
 
 #' Capitalize the first letter of each word
 #'
@@ -118,8 +134,16 @@ statmode <- function(x, na.rm = FALSE) {
 }
 
 is.outlier <- function(x, SDs=10,na.rm=F) {
-  abs((x - mean(x, na.rm=na.rm)) / sd(x, na.rm = na.rm)) -> devs
-  return(is.na(devs) | devs > SDs)
+  warning('This is the old version of the function, maintained for backward compatibility, which uses standard deviations from mean as the criterion. Please switch to using is_outlier.')
+  is_outlier(x, deviation_threshold=SDs, na.rm=na.rm, FUN=mean)
+}
+
+is_outlier <- function(x, deviation_threshold=10, na.rm=F, FUN=median) {
+  mean_value <- FUN(x, na.rm=na.rm)
+  deviations <- abs(x - mean_value)
+  mean_deviation <- FUN(deviations, na.rm=na.rm)
+  relative_deviations <- deviations/mean_deviation
+  return(is.na(relative_deviations) | relative_deviations > deviation_threshold)
 }
 
 mean.maxna <- function(x,maxna) {
@@ -127,13 +151,6 @@ mean.maxna <- function(x,maxna) {
   } else return(mean(x,na.rm=T))
 }
 
-cluster <- function(sp, distKM) {
-  require(sp)
-  require(geosphere)
-  sp <- spdf(sp)
-  hc <- sp %>% coordinates %>% distm %>% as.dist %>% hclust
-  cutree(hc,h=distKM*1000)
-}
 
 
 na.cover <- function(x, x.new) { ifelse(is.na(x), x.new, x) }
@@ -170,18 +187,26 @@ orderfactor <- function(var, by) {
 }
 
 
-expand_dates <- function(df, datecol='date', targetdates=NULL) {
+expand_dates <- function(df, datecol='date', targetdates=NULL, fill=NA, vars_to_avg=NULL) {
+
   groupvarlist <- df %>% select(all_of(dplyr::group_vars(df))) %>% as.list() %>% lapply(unique)
 
   if(is.null(targetdates))
     targetdates <- seq.Date(min(df[[datecol]]),
                             max(df[[datecol]]),
-                            by='day')
+                            by="day")
 
   if(!is.list(targetdates)) targetdates %<>% list
 
+  if(!is.na(fill) & !is.list(fill)){
+    fill_cols <- ifelse(is.null(vars_to_avg), names(df)[sapply(df, is.numeric)], vars_to_avg)
+    fill_values <- setNames(as.list(rep(fill, length(fill_cols))), fill_cols)
+  }else{
+    fill_values <- list(NA)
+  }
+
   names(targetdates) <- datecol
-  full_join(df, expand.grid(c(groupvarlist, targetdates)))
+  tidyr::complete(df, !!!targetdates, fill=fill_values)
 }
 
 get_yoy <- function(x, date) {
@@ -191,7 +216,207 @@ get_yoy <- function(x, date) {
   x / x[ind] - 1
 }
 
+
 x_at_zero <- function(headroom=.05, ...) {
   list(ggplot2::scale_y_continuous(expand=ggplot2::expansion(mult=c(0,headroom)), ...),
        ggplot2::expand_limits(y=0))
+}
+
+#function to read in an excel file with multiple header rows, either combining into one row (wide=T) or pivoting longer
+silent_read <- function(...) suppressMessages(read_xlsx(...))
+
+read_wide_xlsx <- function(path, sheet=NULL,
+                           header_rows = length(header_row_names),
+                           skip=0,
+                           info_columns=1,
+                           header_row_names=paste0('V', 1:header_rows),
+                           stop_at_blank_row=T, discard_empty_columns=T,
+                           wide_format=F,
+                           ...) {
+  header <- silent_read(path, sheet=sheet, skip=skip, n_max=header_rows, col_names = F)
+  data <- silent_read(path, sheet=sheet, skip=header_rows+skip, col_names = F, ...)
+
+  if(stop_at_blank_row) {
+    first_empty_row <- data %>% apply(1, function(x) sum(!is.na(x))) %>% equals(0) %>% which %>% min
+    data %<>% slice_head(n=first_empty_row-1)
+  }
+
+  if(discard_empty_columns) {
+    empty_columns <- data %>% apply(2, function(x) sum(!is.na(x))) %>% equals(0) %>% which
+    data %<>% select(-all_of(empty_columns))
+  }
+
+  header %>% t %>% as_tibble() %>%
+    fill(everything(), .direction='down') %>%
+    apply(1, function(x) x %>% na.omit %>% matrix(nrow=1) %>% as_tibble) %>%
+    bind_rows() ->
+    header_df
+
+  header_df %>% select(matches('^V[0-9]+$')) %>%
+    apply(1, function(x) x %>% na.omit %>% paste(collapse='_')) ->
+    header_colnames
+
+  if(!is.null(header_row_names)) names(header_df) <- header_row_names
+  header_df %<>% mutate(col=names(header))
+
+  if(wide_format) names(data) <- header_colnames
+
+  if(!wide_format) {
+    names(data)[info_columns] <- header_colnames[info_columns]
+
+    data %>%
+      mutate(across(-all_of(info_columns), as.character)) %>%
+      pivot_longer(-all_of(info_columns), names_to='col') %>%
+      right_join(header_df, .) %>% select(-col)
+  }
+}
+
+#rolling mean for data by date
+rollmean_date <- function(x, dates, width=7) {
+  x.out <- x
+  x.out[] <- NA
+  for(i in 1:length(x))
+    x.out[i] <- sum(x[dates %in% (dates[i]-0:(width-1))], na.rm=T)/width
+  return(x.out)
+}
+
+#equals operator that treats NA's as a value to be compared instead of returning NA
+'%eqna%' <- function(x, y) (!is.na(x) & !is.na(y) & x==y) | (is.na(x) & is.na(y))
+
+#read the BP Statistical Review data
+read_bp <- function(file_path,
+                    sheet_name=NULL,
+                    year=2022,
+                    startRow=3, ignore.case=T, read_multiple=F) {
+  require(readxl)
+  excel_sheets(file_path) -> sheets
+
+  if(is.null(sheet_name)) {
+    message(paste('no sheet given. options:', paste(sheets, collapse='; ')))
+    return(sheets)
+  }
+
+  if(sheet_name %notin% sheets) sheet_name = grep(sheet_name, sheets, value=T, ignore.case=ignore.case)
+  if(length(sheet_name)>1 & !read_multiple) stop(paste('sheet_name corresponds to more than one sheet: ', paste(sheet_name, collapse='; ')))
+  if(length(sheet_name)==0) stop(paste('sheet_name does not match a sheet. options: ', paste(sheets, collapse='; ')))
+
+  lapply(sheet_name,
+         function(sn) {
+           read_xlsx(file_path,
+                     sheet=sn, #rowIndex=NULL,
+                     skip=startRow-1,
+                     .name_repair = function(x) x %>% make.names %>% make.unique) -> d
+
+           names(d)[1] <- 'country'
+           d$is.country <- with(d,!(is.na(country) | grepl("Other|Total|Africa", country)))
+           d$is.country[d$country=="South Africa"] <- T
+           d$is.country[d$country=="Central America"] <- F
+           world.total.index <- match("Total World", d$country)
+           if(is.na(world.total.index))
+             world.total.index <- grep("Total", d$country) %>% tail(1)
+           d$is.country[world.total.index:nrow(d)] <- F
+           last.data.row = d[[paste0('X', year-1)]] %>% is.na() %>% not %>% which %>% max
+           d <- d[1:last.data.row,]
+           EU.index <- grep("European Union", d$country)
+           d$country[EU.index] <- "EU"
+           d$is.country[EU.index] <- T
+           d$country[d$country=="United Kingdom"] <- "UK"
+           d$country[grep("Russia", d$country)] <- "Russia"
+
+           d %>% select(-matches("X[0-9]*\\.")) %>%
+             filter(!is.na(country)) %>%
+             pivot_longer(starts_with('X'), names_to='year', values_transform=list(value=as.numeric)) %>%
+             mutate(across(value, as.numeric), across(year, force_numeric),
+                    variable=sn)
+         }) -> d.out
+
+  if(!read_multiple) d.out <- d.out[[1]]
+  return(d.out)
+}
+
+#clean up memory, interactively choosing which objects to delete
+cleanup <- function(protect,threshold=1) {
+  sort( sapply(ls(envir = .GlobalEnv),function(x){object.size(get(x))}),decreasing = T)/1e6 -> memsizes
+  trash <- rep(F,length(memsizes))
+
+  for(o in which(memsizes>threshold)) {
+    print(paste0("total memory size: ",round(sum(memsizes[!trash]),1),"Mb"))
+    print(paste0(ifelse(o==1,"","next "),"largest object: ",names(memsizes)[o],", ",round(memsizes[o],1),"Mb"))
+    readline("remove y/n/q ") -> reply
+    if(substr(reply,1,1) %in% c("", "q")) break()
+
+    if(substr(reply,1,1) == "y") trash[o] <- T
+  }
+
+  if(sum(trash==T)==0) return()
+
+  rmObjs <- names(memsizes[trash])
+  print(paste("removing",paste(rmObjs,collapse=" ")))
+  readline("continue y/n ") -> reply2
+  #rmObjs <- names(memsizes[memsizes>10e6 & !(names(memsizes) %in% c(protectObjects,"total"))])
+  if(substr(reply2,1,1) == "y") rm(list=rmObjs, envir = .GlobalEnv)
+}
+
+#paste an Excel table from clipboard into a data.frame
+paste.xl <- function(header=T, ...)
+  read.table('clipboard', sep='\t', header=header, ...)
+
+#copy a data.frame as a string that can be pasted into an Excel spreadsheet
+copy.xl <- function(df, col.names=T, quote=F, row.names=F, ...)
+  write.table(df, 'clipboard', sep='\t',
+              col.names=col.names, quote=quote, row.names=row.names, ...)
+
+#' A rolling average function that completes date
+#' and fill numerical values with NA or user-specified value
+#'
+#' User can specify a minimal number of non NA values for average to be valid.
+#'
+#' @param df
+#' @param average_width
+#' @param average_by
+#' @param date_col
+#' @param vars_to_avg
+#' @param fill
+#' @param min_values
+#'
+#' @return
+#' @export
+#'
+#' @examples
+rolling_average <- function(df,
+                            average_width,
+                            average_by ="day",
+                            datecol="date",
+                            vars_to_avg=grep('^value', names(df), value = T),
+                            fill=NA,
+                            min_values = NULL){
+
+  if(average_width == 0){return(df)}
+
+  mean_fn <- function(x) {
+    if(!is.null(min_values) && sum(!is.na(x)) < min_values) {
+      return(NA)
+    }
+    mean(x, na.rm = T)
+  }
+
+  train_roll_fn <- function(var){
+    zoo::rollapply(var, width = average_width,
+                   FUN = mean_fn, align = "right", fill = NA)
+  }
+
+  df %>%
+    expand_dates(datecol=datecol,
+                 fill=fill,
+                 vars_to_avg=vars_to_avg) %>%
+    mutate_at(vars_to_avg, train_roll_fn)
+}
+
+
+#Get a list of OECD member countries in specified format
+oecd_members <- function(format='iso2c') {
+  countrycode::countrycode(scan(textConnection(
+    "Austria, Australia, Belgium, Canada, Chile, Czech Republic, Denmark, Estonia, Finland, France, Germany, Greece, Hungary, Iceland, Ireland, Israel, Italy, Japan, Korea, Latvia, Lithuania, Luxembourg, Mexico, the Netherlands, New Zealand, Norway, Poland, Portugal, Slovak Republic, Slovenia, Spain, Sweden, Switzerland, Turkey, United Kingdom, United States"),
+    character(), sep=','),
+    'country.name.en', format)
 }

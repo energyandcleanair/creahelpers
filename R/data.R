@@ -11,17 +11,28 @@
 #' @export
 get_adm <- function(level=0, res='full', version='410', iso2s=NULL, method='rgeos') {
 
-  if(res=='full'){
-    ext=paste0(version, '_', level, '_', res)
-  }else{
-    ext=paste0(version, '_', level, '_', res, '_', method)
+  if(version>=410) {
+    if(res=='full') { ext=paste0(version, '_', level, '_', res)
+    } else { ext=paste0(version, '_', level, '_', res, '_', method) }
+
+    f <- get_boundaries_path(paste0('gadm/gadm',ext,'.RDS'))
+    full_res_file <- get_boundaries_path(paste0('gadm/gadm_',version,'-levels.gpkg'))
+
+    if(!file.exists(f) & !file.exists(full_res_file)) {
+      warning(paste('GADM version', version, 'not found, using old version 3.6. You should update your GIS directory.'))
+      version <- '36'
+    }
   }
 
-  f <- get_boundaries_path(paste0('gadm/gadm',ext,'.RDS'))
+  if(version<40) {
+    resext=''
+    if(res!='full') resext=paste0('_', res)
+    f <- get_boundaries_path(paste0('gadm',version,'_',level, resext,'.RDS'))
+  }
 
   if(!file.exists(f) & res=='full') {
     message('RDS not found, trying geopackage')
-    adm <- sf::st_read(get_boundaries_path(paste0('gadm/gadm_410-levels.gpkg')),
+    adm <- sf::st_read(full_res_file,
                 layer=paste0('ADM_',level)) %>%
       creahelpers::to_spdf()
     saveRDS(adm, f)
