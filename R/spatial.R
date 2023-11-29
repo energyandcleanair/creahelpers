@@ -99,8 +99,6 @@ simplify_adm = function(level=0, resname='low', version='410', method) {
 
   get_adm(level, res='full', version) -> adm
 
-  adm_sf_coarse <- rmapshaper::ms_simplify(input = as(adm, 'SpatialPolygonsDataFrame')) %>% sf::st_as_sf()
-
   # Original approach
   # adm_sf %>% sf::st_simplify(dTolerance = tol) -> adm_sf_coarse
   # adm %>% sf::st_as_sf() -> adm_sf
@@ -150,7 +148,7 @@ remove_small_polygons <- function(spdf, threshold_km2){
     return(spdf)
   }
 
-  spdf_dis <- disaggregate(spdf)
+  spdf_dis <- sp::disaggregate(spdf)
 
   # Use terra. Facing errors with rgeos::gArea
   # Threshold: A tenth of Luxembourg ~ 250km2
