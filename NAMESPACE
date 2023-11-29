@@ -31,6 +31,7 @@ importFrom(dplyr,ungroup)
 importFrom(dplyr,vars)
 
 importFrom(lubridate,"hour<-")
+importFrom(lubridate,"year<-")
 importFrom(lubridate,day)
 importFrom(lubridate,hour)
 importFrom(lubridate,month)
