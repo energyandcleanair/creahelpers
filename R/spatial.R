@@ -263,7 +263,7 @@ to_sf_points <- function(data, crs = NULL, llcols = NULL, na.action = na.omit) {
 }
 
 
-#' Convert to raster format if not.
+#' Convert to raster RasterLayer format if not already in this format. Also works with lists.
 #' (using raster::raster loses values if already a raster)
 #'
 #' @param x
@@ -273,6 +273,10 @@ to_sf_points <- function(data, crs = NULL, llcols = NULL, na.action = na.omit) {
 #'
 #' @examples
 to_raster <- function(x){
+  if(class(x)[1] == "list"){
+    return(sapply(x, to_raster, USE.NAMES = T))
+  }
+
   if(class(x)[1] != "RasterLayer") {
     raster(x)
   } else {
@@ -280,7 +284,7 @@ to_raster <- function(x){
   }
 }
 
-#' Convert to terra::rast format if not.
+#' Convert to terra SpatRaster if not already in this format. Also works with lists.
 #' (using terra::rast loses values if already a rast)
 #'
 #' @param x
@@ -290,6 +294,10 @@ to_raster <- function(x){
 #'
 #' @examples
 to_rast <- function(x) {
+  if(class(x)[1] == "list"){
+    return(sapply(x, to_rast, USE.NAMES = T))
+  }
+
   if(class(x)[1] != "SpatRaster") {
     terra::rast(x)
   } else {
