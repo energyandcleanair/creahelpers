@@ -273,6 +273,9 @@ to_sf_points <- function(data, crs = NULL, llcols = NULL, na.action = na.omit) {
 #'
 #' @examples
 to_raster <- function(x){
+
+  if(is.null(x)) return(NULL)
+
   if(class(x)[1] == "list"){
     return(sapply(x, to_raster, USE.NAMES = T))
   }
@@ -294,6 +297,9 @@ to_raster <- function(x){
 #'
 #' @examples
 to_rast <- function(x) {
+
+  if(is.null(x)) return(NULL)
+
   if(class(x)[1] == "list"){
     return(sapply(x, to_rast, USE.NAMES = T))
   }
