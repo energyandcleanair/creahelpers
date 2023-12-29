@@ -420,3 +420,7 @@ oecd_members <- function(format='iso2c') {
     character(), sep=','),
     'country.name.en', format)
 }
+
+default_if_null <- function(x, y){
+  if(is.null(x)) y else x
+}
