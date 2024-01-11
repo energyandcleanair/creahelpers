@@ -424,3 +424,16 @@ oecd_members <- function(format='iso2c') {
 default_if_null <- function(x, y){
   if(is.null(x)) y else x
 }
+
+#' Change the extension of a filepath
+#'
+#' @param filepath
+#' @param new_extension
+#'
+#' @return
+#' @export
+#'
+#' @examples
+change_extension <- function(filepath, new_extension) {
+  return(sub("\\.[[:alnum:]]+$", paste0(".", new_extension), filepath))
+}
