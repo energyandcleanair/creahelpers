@@ -280,6 +280,10 @@ to_raster <- function(x){
     return(sapply(x, to_raster, USE.NAMES = T))
   }
 
+  if(class(x)[1] %in% c("RasterStack", "RasterBrick")) {
+    return(x)
+  }
+
   if(class(x)[1] != "RasterLayer") {
     raster(x)
   } else {
