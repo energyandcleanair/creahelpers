@@ -311,6 +311,23 @@ to_rast <- function(x) {
   }
 }
 
+#' Convert a raster stack to a list of
+#'
+#' @return
+#' @export
+#'
+#' @examples
+unrasterstack <- function(x){
+
+  if(class(x)[1]=='RasterStack'){
+    names <- names(x)
+    x <- raster::unstack(x) %>%
+      `names<-`(names)
+  }
+
+  x
+}
+
 focal.loop <- function(r, w, fun, filename = raster::rasterTmpFile(), ...) {
 
   # compile in hopes of speeding up
