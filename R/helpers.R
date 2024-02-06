@@ -439,43 +439,54 @@ change_extension <- function(filepath, new_extension) {
 }
 
 
-#' A CREA version of make.names, with our nomenclature
-#'
-#' @param ...
-#'
-#' @return
-#' @export
-#'
-#' @examples
-make_names <- function(...){
-  x <- make.names(...)
-  y <- tolower(gsub("\\.", "_", x))
-
-  # Ensure we didn't lose information by doing so
-  if(length(unique(x)) != length(unique(y))){
-    y <- tolower(gsub("\\.", "_", gsub("_", "__", x)))
-    if(length(unique(x)) != length(unique(y))) stop("Non-bijective")
-  }
-  return(y)
-}
-
-
 #' A CREA version of make.unique, with our nomenclature
 #'
-#' @param ...
+#' @param ... parameters passed to make.unique
 #'
 #' @return
 #' @export
 #'
 #' @examples
 make_unique <- function(...){
-  x <- make.unique(...)
-  y <- tolower(gsub("\\.", "_", x))
 
-  # Ensure we didn't lose information by doing so
-  if(length(unique(x)) != length(unique(y))){
-    y <- tolower(gsub("\\.", "_", gsub("_", "__", x)))
-    if(length(unique(x)) != length(unique(y))) stop("Non-bijective")
+  x <- make.unique(...)
+  to_crea <- function(x) x %>% tolower %>% gsub("\\.", "_", .)
+
+
+  unique_x <- unique(x)
+  unique_y <- unique(x)
+
+  # Ensure we have same number of unique elements
+  repeat{
+    unique_y <- unique_y %>%
+      to_crea() %>%
+      make.unique() %>%
+      to_crea()
+
+    if(length(unique(x)) == length(unique(unique_y))){
+      break
+    }
   }
-  return(y)
+
+  return(unique_y)
+
 }
+
+#' A CREA version of make.names, with our nomenclature
+#'
+#' @param ... parameters passed to make.names
+#'
+#' @return
+#' @export
+#'
+#' @examples
+make_names <- function(...){
+
+  x <- make.names(...)
+
+  unique_x <- unique(x)
+  unique_y <- make_unique(unique_x)
+
+  recode(x, !!!setNames(unique_y, unique_x))
+}
+
