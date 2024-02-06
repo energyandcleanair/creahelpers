@@ -75,13 +75,9 @@ cropProj <- function(shapeobj, rasterobj, expand = 1.25, ...) {
     multiply_by(expand)
   shapeobj <- shapeobj %>% crop(bb)
   if(grepl("Raster", class(shapeobj))) {
-    result <- try(shapeobj %>% projectRaster(rasterobj, ...))
-    if(inherits(result, "try-error")) { # use terra if raster fails, convert back to raster
-      result <- project(rast(shapeobj), rast(rasterobj), ...) %>% raster
-    }
-    return(result)
+    result <- project(rast(shapeobj), rast(rasterobj), ...) %>% raster
   } else {
-    shapeobj %>% spTransform2(crs(rasterobj)) %>% return
+    shapeobj %>% spTransform2(crs(rasterobj))
   }
 }
 
