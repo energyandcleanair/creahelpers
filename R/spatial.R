@@ -75,7 +75,7 @@ cropProj <- function(shapeobj, rasterobj, expand = 1.25, ...) {
     multiply_by(expand)
   shapeobj <- shapeobj %>% crop(bb)
   if(grepl("Raster", class(shapeobj))) {
-    result <- project(rast(shapeobj), rast(rasterobj), ...) %>% raster
+    result <- project(as(shapeobj, 'SpatRaster'), rast(rasterobj), ...) %>% raster
   } else {
     shapeobj %>% spTransform2(crs(rasterobj))
   }
