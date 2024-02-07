@@ -437,3 +437,56 @@ default_if_null <- function(x, y){
 change_extension <- function(filepath, new_extension) {
   return(sub("\\.[[:alnum:]]+$", paste0(".", new_extension), filepath))
 }
+
+
+#' A CREA version of make.unique, with our nomenclature
+#'
+#' @param ... parameters passed to make.unique
+#'
+#' @return
+#' @export
+#'
+#' @examples
+make_unique <- function(...){
+
+  x <- make.unique(...)
+  to_crea <- function(x) x %>% tolower %>% gsub("\\.", "_", .)
+
+
+  unique_x <- unique(x)
+  unique_y <- unique(x)
+
+  # Ensure we have same number of unique elements
+  repeat{
+    unique_y <- unique_y %>%
+      to_crea() %>%
+      make.unique() %>%
+      to_crea()
+
+    if(length(unique(x)) == length(unique(unique_y))){
+      break
+    }
+  }
+
+  return(unique_y)
+
+}
+
+#' A CREA version of make.names, with our nomenclature
+#'
+#' @param ... parameters passed to make.names
+#'
+#' @return
+#' @export
+#'
+#' @examples
+make_names <- function(...){
+
+  x <- make.names(...)
+
+  unique_x <- unique(x)
+  unique_y <- make_unique(unique_x)
+
+  recode(x, !!!setNames(unique_y, unique_x))
+}
+
