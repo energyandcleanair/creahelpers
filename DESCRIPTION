@@ -1,10 +1,10 @@
 Package: creahelpers
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
+Title: A series of functions for internal CREA use
+Version: 0.1.1
 Authors@R: c(
     person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("cre","aut")),
-    person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("aut")),
+    person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("cre","aut")),
     person("Danny", "Hartono", email = "danny@energyandcleanair.org", role = c("aut"))
     )
 Maintainer: Hubert Thieriot <hubert@energyandcleanair.org>
@@ -38,4 +38,4 @@ Imports:
     cartomisc
 Remotes:
     statnmap/cartomisc
-RoxygenNote: 7.1.1
+RoxygenNote: 7.2.3

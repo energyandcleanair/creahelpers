@@ -70,6 +70,10 @@ importFrom(raster,values)
 importFrom(raster,projectExtent)
 importFrom(raster,projectRaster)
 
+
+importFrom(readr, cols)
+importFrom(readr, read_csv)
+
 importFrom(readxl, read_xls)
 importFrom(readxl, read_xlsx)
 
