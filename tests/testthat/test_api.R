@@ -1,4 +1,4 @@
-test_that("api.get works", {
+test_that("api.get works for split_by and params", {
 
   date_from <- "2023-01-01"
   start <- Sys.time()
@@ -81,4 +81,13 @@ test_that("api.get works", {
   testthat::expect_gt(by_year_time, onego_time * 2)
   testthat::expect_gt(by_year_params_time, onego_time * 2)
 
+})
+
+test_that("api.get works with null date_from", {
+
+  endpoint_default_date_from = "2022-01-01"
+  allde <- creahelpers::api.get("api.energyandcleanair.org/power/generation",
+                                aggregate_by="country,source,date",
+                                country="DE")
+  testthat::expect_equal(min(allde$date), as.Date(endpoint_default_date_from))
 })

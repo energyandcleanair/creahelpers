@@ -83,6 +83,9 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
     # If any parameter is a list, convert it to a string
     interval_params <- lapply(interval_params, function(x) if (is.vector(x)) paste(x, collapse = ",") else x)
 
+    # Remove null params to keep default endpoint values (not sure it is necessary)
+    interval_params <- interval_params[!sapply(interval_params, is.null)]
+
     attempt <- 1
     current_sleep <- initial_sleep
     while (attempt <= max_retries) {
