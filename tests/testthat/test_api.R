@@ -56,7 +56,7 @@ test_that("api.get works", {
                             date_from=date_from,
                             params = list(aggregate_by="country,source,date",
                                           country="DE",
-                                          date_from=date_from + lubridate::days(100)),
+                                          date_from=as.Date(date_from) + lubridate::days(100)),
                             split_by="year")
   by_year_params_different_time <- Sys.time() - start
 
