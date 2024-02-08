@@ -86,12 +86,12 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
     attempt <- 1
     current_sleep <- initial_sleep
     while (attempt <= max_retries) {
-      # try({
+      try({
         response <- httr::GET(url = endpoint, query = interval_params)
         if (httr::status_code(response) == 200) {
           return(read_csv(httr::content(response, "text"), col_types = cols()))
         }
-      # }, silent = TRUE)
+      }, silent = TRUE)
       if (attempt < max_retries) {
         Sys.sleep(current_sleep)
         current_sleep <- current_sleep * backoff_factor
