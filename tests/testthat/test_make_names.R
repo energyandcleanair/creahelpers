@@ -6,6 +6,7 @@ test_that("make_unique and make_name work and do not lose any information in the
   tricky_ones <- list(
     c("A", "a"),
     c("A", "a.1", "a_1"),
+    c("A", "a", "a.1", "a_1"),
     c("A", "a", "a.1", "a_1")
   )
 
