@@ -57,7 +57,7 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
 
 
   # Create date intervals
-  if (!is.null(date_from) && !is.null(split_by)) {
+  if (!is.null(params$date_from) && !is.null(split_by)) {
     start_date <- as.Date(params$date_from)
     end_date <- as.Date(params$date_to)
     dates <- seq(start_date, end_date, by = split_by)
