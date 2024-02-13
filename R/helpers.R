@@ -1,6 +1,22 @@
 sel <- dplyr::select
 
+#' Return true for all values of x that are NOT included in y
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
 '%notin%' <- function(x,y)!('%in%'(x,y))
+
+#' Return a vector of the values of x that are included in y
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
+'%whichin%' <- function(x,y) x[x %in% y]
+
+#' Return a vector of the values of x that are NOT included in y
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
+'%whichnotin%' <- function(x,y) x[x %notin% y]
 
 #' Capitalize the first letter of each word
 #'
@@ -423,3 +439,73 @@ oecd_members <- function(format='iso2c') {
     character(), sep=','),
     'country.name.en', format)
 }
+
+default_if_null <- function(x, y){
+  if(is.null(x)) y else x
+}
+
+#' Change the extension of a filepath
+#'
+#' @param filepath
+#' @param new_extension
+#'
+#' @return
+#' @export
+#'
+#' @examples
+change_extension <- function(filepath, new_extension) {
+  return(sub("\\.[[:alnum:]]+$", paste0(".", new_extension), filepath))
+}
+
+
+#' A CREA version of make.unique, with our nomenclature
+#'
+#' @param ... parameters passed to make.unique
+#'
+#' @return
+#' @export
+#'
+#' @examples
+make_unique <- function(...){
+
+  x <- make.unique(...)
+  to_crea <- function(x) x %>% tolower %>% gsub("\\.", "_", .)
+
+
+  unique_x <- unique(x)
+  unique_y <- unique(x)
+
+  # Ensure we have same number of unique elements
+  repeat{
+    unique_y <- unique_y %>%
+      to_crea() %>%
+      make.unique() %>%
+      to_crea()
+
+    if(length(unique(x)) == length(unique(unique_y))){
+      break
+    }
+  }
+
+  return(unique_y)
+
+}
+
+#' A CREA version of make.names, with our nomenclature
+#'
+#' @param ... parameters passed to make.names
+#'
+#' @return
+#' @export
+#'
+#' @examples
+make_names <- function(...){
+
+  x <- make.names(...)
+
+  unique_x <- unique(x)
+  unique_y <- make_unique(unique_x)
+
+  recode(x, !!!setNames(unique_y, unique_x))
+}
+

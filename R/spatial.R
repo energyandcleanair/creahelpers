@@ -75,13 +75,9 @@ cropProj <- function(shapeobj, rasterobj, expand = 1.25, ...) {
     multiply_by(expand)
   shapeobj <- shapeobj %>% crop(bb)
   if(grepl("Raster", class(shapeobj))) {
-    result <- try(shapeobj %>% projectRaster(rasterobj, ...))
-    if(inherits(result, "try-error")) { # use terra if raster fails, convert back to raster
-      result <- project(rast(shapeobj), rast(rasterobj), ...) %>% raster
-    }
-    return(result)
+    result <- project(as(shapeobj, 'SpatRaster'), rast(rasterobj), ...) %>% raster
   } else {
-    shapeobj %>% spTransform2(crs(rasterobj)) %>% return
+    shapeobj %>% spTransform2(crs(rasterobj))
   }
 }
 
@@ -101,8 +97,6 @@ simplify_adm <- function(level = 0, resname = 'low', version = '410', method) {
   print(method)
 
   adm <- get_adm(level, res='full', version)
-
-  adm_sf_coarse <- rmapshaper::ms_simplify(input = as(adm, 'SpatialPolygonsDataFrame')) %>% sf::st_as_sf()
 
   # Original approach
   # adm_sf %>% sf::st_simplify(dTolerance = tol) -> adm_sf_coarse
@@ -153,7 +147,7 @@ remove_small_polygons <- function(spdf, threshold_km2){
     return(spdf)
   }
 
-  spdf_dis <- disaggregate(spdf)
+  spdf_dis <- sp::disaggregate(spdf)
 
   # Use terra. Facing errors with rgeos::gArea
   # Threshold: A tenth of Luxembourg ~ 250km2
@@ -265,7 +259,7 @@ to_sf_points <- function(data, crs = NULL, llcols = NULL, na.action = na.omit) {
 }
 
 
-#' Convert to raster format if not.
+#' Convert to raster RasterLayer format if not already in this format. Also works with lists.
 #' (using raster::raster loses values if already a raster)
 #'
 #' @param x
@@ -275,6 +269,17 @@ to_sf_points <- function(data, crs = NULL, llcols = NULL, na.action = na.omit) {
 #'
 #' @examples
 to_raster <- function(x){
+
+  if(is.null(x)) return(NULL)
+
+  if(class(x)[1] == "list"){
+    return(sapply(x, to_raster, USE.NAMES = T))
+  }
+
+  if(class(x)[1] %in% c("RasterStack", "RasterBrick")) {
+    return(x)
+  }
+
   if(class(x)[1] != "RasterLayer") {
     raster(x)
   } else {
@@ -282,7 +287,7 @@ to_raster <- function(x){
   }
 }
 
-#' Convert to terra::rast format if not.
+#' Convert to terra SpatRaster if not already in this format. Also works with lists.
 #' (using terra::rast loses values if already a rast)
 #'
 #' @param x
@@ -292,11 +297,35 @@ to_raster <- function(x){
 #'
 #' @examples
 to_rast <- function(x) {
+
+  if(is.null(x)) return(NULL)
+
+  if(class(x)[1] == "list"){
+    return(sapply(x, to_rast, USE.NAMES = T))
+  }
+
   if(class(x)[1] != "SpatRaster") {
     terra::rast(x)
   } else {
     x
   }
+}
+
+#' Convert a raster stack to a list of
+#'
+#' @return
+#' @export
+#'
+#' @examples
+unrasterstack <- function(x){
+
+  if(class(x)[1]=='RasterStack'){
+    names <- names(x)
+    x <- raster::unstack(x) %>%
+      `names<-`(names)
+  }
+
+  x
 }
 
 focal.loop <- function(r, w, fun, filename = raster::rasterTmpFile(), ...) {
@@ -318,17 +347,18 @@ focal.loop <- function(r, w, fun, filename = raster::rasterTmpFile(), ...) {
     padUp <- min(c(bs$row[i] - 1, pad.rows))
     padDown <- min(c(nrow(r) - bs$row[i] - bs$nrows[i] + 1, pad.rows))
 
-    # read a chunk of rows and convert to matrix
+    #read a chunk of rows and convert to matrix
     raster::getValues(r, bs$row[i] - padUp,
-              bs$nrows[i] + padUp + padDown) %>%
-      r.sub <- matrix(ncol = ncol(r), byrow = T)
+                      bs$nrows[i] + padUp + padDown) %>%
+      matrix(ncol=ncol(r), byrow=T) -> r.sub
+
 
     # convert to raster, run focal and convert to vector for writing
     r.sub %>% raster %>%
       raster::focal(w=w,fun=cmp_fun, ...) %>%
-      r.sub <- matrix(ncol = ncol(r), byrow = T)
-    r.sub <- r.sub[(padUp + 1):(nrow(r.sub) - padDown),] %>%
-      t %>% as.vector
+      matrix(ncol=ncol(r), byrow=T) -> r.sub
+    r.sub[(padUp+1):(nrow(r.sub)-padDown),] %>%
+      t %>% as.vector-> r.sub
 
     # write the rows back
     r.out <- raster::writeValues(r.out, r.sub, bs$row[i])
