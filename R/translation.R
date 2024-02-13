@@ -29,6 +29,8 @@ trans <- function(x,
 
   if(!is.null(wrap_chars)) dict[[lang]] %<>% strsplit_lang(width=wrap_chars, lang=lang)
 
+  x_orig <- x
+
   if(ignore.case) {
     if(is.factor(x)) { x <- factor(tolower(x), levels=tolower(levels(x)))
     } else x %<>% tolower
@@ -43,16 +45,16 @@ trans <- function(x,
     dict$EN %<>% erase_non_ascii
   }
 
-  dictvect <- dict[[lang]]
-  names(dictvect) <- dict$EN
-
   #identify values not translated
-  missing <- x %whichnotin% dict$EN
+  missing <- which(x %notin% dict$EN)
   if(length(missing)>0) {
-    msg = warning(paste('these values were not matched:', paste(missing, collapse='; ')))
+    msg = warning(paste('these values were not matched:', paste(unique(x_orig[missing]), collapse='; ')))
     if(when_missing=='warn') warning(msg)
     if(when_missing=='stop') stop(msg)
   }
+
+  dictvect <- c(dict[[lang]], x_orig[missing])
+  names(dictvect) <- c(dict$EN, x[missing])
 
   if(is.character(x)) x %<>% recode(!!!dictvect)
   if(is.factor(x)) x %<>% recode_factor(!!!dictvect, .ordered=T)
