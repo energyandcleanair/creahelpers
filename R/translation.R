@@ -53,6 +53,7 @@ trans <- function(x,
     if(when_missing=='stop') stop(msg)
   }
 
+  #add missing values to named vector
   dictvect <- c(dict[[lang]], x_orig[missing])
   names(dictvect) <- c(dict$EN, x[missing])
 
