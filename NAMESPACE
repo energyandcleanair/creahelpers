@@ -50,6 +50,10 @@ importFrom(magrittr,set_names)
 importFrom(magrittr,subtract)
 importFrom(magrittr,use_series)
 
+importFrom(memoise, memoise)
+importFrom(memoise, cache_filesystem)
+importFrom(memoise, drop_cache)
+
 importFrom(plyr,.)
 importFrom(plyr,ddply)
 importFrom(plyr,dlply)

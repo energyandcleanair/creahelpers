@@ -35,7 +35,8 @@ Imports:
     pbapply,
     compiler,
     countrycode,
-    cartomisc
+    cartomisc,
+    memoise
 Remotes:
     statnmap/cartomisc
 RoxygenNote: 7.2.3
