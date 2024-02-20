@@ -509,3 +509,18 @@ make_names <- function(...){
   recode(x, !!!setNames(unique_y, unique_x))
 }
 
+
+
+#' Returns whether or not a and b have exact same unique values
+#'
+#' @param a
+#' @param b
+#'
+#' @return
+#' @export
+#'
+#' @examples
+sets_are_equal <- function(a, b){
+  length(a) == length(b) && all(sort(unique(a)) == sort(unique(b)))
+}
+
