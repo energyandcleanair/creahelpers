@@ -7,5 +7,5 @@ export_versions <- function(filepath="versions.csv", pattern="crea") {
       tibble(package=x, version=packageVersion(x))
     }) %>%
     bind_rows() %>%
-    write_csv(filepath)
+    readr::write_csv(filepath)
 }
