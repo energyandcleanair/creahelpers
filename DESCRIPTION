@@ -1,7 +1,7 @@
 Package: creahelpers
 Type: Package
 Title: A series of functions for internal CREA use
-Version: 0.1.1
+Version: 0.2.0
 Authors@R: c(
     person("Lauri", "Myllyvirta", email = "lauri@energyandcleanair.org", role = c("cre","aut")),
     person("Hubert", "Thieriot", email = "hubert@energyandcleanair.org", role = c("aut")),
