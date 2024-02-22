@@ -3,4 +3,7 @@ log_layout_crea <- logger::layout_glue_generator(format = paste(
   "{colorize_by_log_level(msg, levelr)}"
 ))
 
-logger::log_layout(log_layout_crea)
+init_log <- function(){
+  logger::log_layout(log_layout_crea)
+}
+
