@@ -134,6 +134,9 @@ api._get_raw <- function(endpoint, params, max_retries, initial_sleep, backoff_f
       if (httr::status_code(response) == 200) {
         return(read_csv(httr::content(response, "text"), col_types = cols()))
       }
+      if (httr::status_code(response) == 204) {
+        return(tibble())
+      }
     }, silent = TRUE)
     if (attempt < max_retries) {
       Sys.sleep(current_sleep)
