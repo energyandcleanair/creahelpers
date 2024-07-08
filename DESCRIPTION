@@ -37,7 +37,8 @@ Imports:
     countrycode,
     cartomisc,
     memoise,
-    logger
+    logger,
+    clipr
 Remotes:
     statnmap/cartomisc
 RoxygenNote: 7.2.3
