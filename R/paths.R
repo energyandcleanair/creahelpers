@@ -12,16 +12,18 @@ get_gis_dir <- function(){
   suppressWarnings(try(readRenviron(".Renviron"), silent = TRUE))
   suppressWarnings(try(dotenv::load_dot_env(), silent = TRUE))
 
-  d <- Sys.getenv("GIS_DIR")
+  ds <- c(Sys.getenv("GIS_DIR"), Sys.getenv("DIR_GIS"))
+  d <- ds[min(which(ds!=""))]
+
   if(d==""){
     stop("Couldn't find gis_dir. Please set gis_dir in your R environment,
-         or GIS_DIR in your system environment (e.g. in .Renviron or .env file)")
+         or GIS_DIR or DIR_GIS in your system environment (e.g. in .Renviron or .env file)")
   }
 
 
   if(!dir.exists(d)){
     stop(sprintf("GIS Directory %s doesn't exist. Please update gis_dir in your R environment,
-                    or GIS_DIR in your system environment (e.g. in .Renviron or .env file)", d))
+                    or GIS_DIR or DIR_GIS in your system environment (e.g. in .Renviron or .env file)", d))
   }
 
   return(d)
