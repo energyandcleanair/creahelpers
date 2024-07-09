@@ -1,0 +1,54 @@
+# Test dataframe.R functions
+
+
+df1 <- data.frame(
+  ID = c(1, 2, 3),
+  Value1 = c(NA, 20, NA),
+  Value2 = c(10, NA, 30)
+)
+
+df2 <- data.frame(
+  ID = c(1, 2, 3),
+  Value1 = c(100, 200, 300),
+  Value2 = c(NA, 25, 35)
+)
+
+# Writing tests for fill_df1_with_df2
+test_that("fill_df1_with_df2 correctly fills NA values from df2", {
+
+  result <- fill_df1_with_df2(df1, df2, "ID", c("Value1", "Value2"))
+
+  expected_result <- data.frame(
+    ID = c(1, 2, 3),
+    Value1 = c(100, 20, 300),
+    Value2 = c(10, 25, 30)
+  )
+
+  expect_equal(result, expected_result)
+})
+
+test_that("fill_df1_with_df2 keeps original values if no NA present", {
+
+  df1_full <- data.frame(
+    ID = c(1, 2, 3),
+    Value1 = c(10, 20, 30),
+    Value2 = c(10, 20, 30)
+  )
+
+  result <- fill_df1_with_df2(df1_full, df2, "ID", c("Value1", "Value2"))
+
+  expect_equal(result, df1_full)
+})
+
+test_that("fill_df1_with_df2 handles empty df2 gracefully", {
+
+  df2_empty <- data.frame(
+    ID = integer(),
+    Value1 = numeric(),
+    Value2 = numeric()
+  )
+
+  result <- fill_df1_with_df2(df1, df2_empty, "ID", c("Value1", "Value2"))
+
+  expect_equal(result, df1)
+})

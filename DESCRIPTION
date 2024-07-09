@@ -38,7 +38,8 @@ Imports:
     cartomisc,
     memoise,
     logger,
-    clipr
+    clipr,
+    uuid
 Remotes:
     statnmap/cartomisc
 RoxygenNote: 7.2.3
