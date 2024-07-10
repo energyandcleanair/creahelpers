@@ -52,3 +52,24 @@ test_that("fill_df1_with_df2 handles empty df2 gracefully", {
 
   expect_equal(result, df1)
 })
+
+test_that("fill_df1_with_df2 adds columns to df1 if need be", {
+
+  df2_extra_col <- data.frame(
+    ID = c(1, 2, 3),
+    Value1 = c(100, 200, 300),
+    Value2 = c(NA, 25, 35),
+    Value3 = c(1, 2, 3)
+  )
+
+  result <- fill_df1_with_df2(df1, df2_extra_col, "ID", c("Value1", "Value2", "Value3"))
+
+  expected_result <- data.frame(
+    ID = c(1, 2, 3),
+    Value1 = c(100, 20, 300),
+    Value2 = c(10, 25, 30),
+    Value3 = c(1, 2, 3)
+  )
+
+  expect_equal(result, expected_result)
+})

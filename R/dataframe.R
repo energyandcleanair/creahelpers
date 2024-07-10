@@ -13,6 +13,13 @@ fill_df1_with_df2 <- function(df1, df2, join_cols, value_cols){
   # ensure suffix is unique...
   suffix <- uuid::UUIDgenerate()
 
+  # Only consider columns existing in df2
+  value_cols <- intersect(value_cols, colnames(df2))
+
+  # Fill df1 with value_cols if they're not already there
+  missing_cols <- setdiff(value_cols, colnames(df1))
+  df1[missing_cols] <- NA
+
   # Perform the update
   df1 %>%
     left_join(df2 %>% select_at(c(join_cols, value_cols)),
