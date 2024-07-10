@@ -73,3 +73,14 @@ test_that("fill_df1_with_df2 adds columns to df1 if need be", {
 
   expect_equal(result, expected_result)
 })
+
+test_that("fill_df1_with_df2 throws error if it adds rows", {
+
+  df2_extra_row <- data.frame(
+    ID = c(1, 2, 3, 3),
+    Value1 = c(100, 200, 300, 400),
+    Value2 = c(NA, 25, 35, 45)
+  )
+
+  expect_error(fill_df1_with_df2(df1, df2_extra_row, "ID", c("Value1", "Value2")))
+})

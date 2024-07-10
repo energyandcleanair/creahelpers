@@ -25,6 +25,13 @@ fill_df1_with_df2 <- function(df1, df2, join_cols, value_cols){
     left_join(df2 %>% select_at(c(join_cols, value_cols)),
               by = join_cols, suffix = c("", suffix)) %>%
     mutate(across(all_of(value_cols), ~ coalesce(get(cur_column()), get(paste0(cur_column(), suffix))))) %>%
-    select(-ends_with(suffix))
+    select(-ends_with(suffix)) %T>%
+    # Throw error if more or fewer rows than before
+    {
+      if(nrow(.) != nrow(df1)){
+        stop("Number of rows changed")
+      }
+    }
+
 }
 
