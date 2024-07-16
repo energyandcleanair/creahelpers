@@ -10,6 +10,8 @@
 #'
 fill_df1_with_df2 <- function(df1, df2, join_cols, value_cols){
 
+  if(is.null(df2)) return(df1)
+
   # ensure suffix is unique...
   suffix <- uuid::UUIDgenerate()
 
