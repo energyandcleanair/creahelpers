@@ -13,11 +13,14 @@ get_gis_dir <- function(){
   suppressWarnings(try(dotenv::load_dot_env(), silent = TRUE))
 
   ds <- c(Sys.getenv("GIS_DIR"), Sys.getenv("DIR_GIS"))
-  d <- ds[min(which(ds!=""))]
+  # Only keep non-empty strings
+  ds <- ds[ds!=""]
 
-  if(d==""){
+  if(length(ds) == 0){
     stop("Couldn't find gis_dir. Please set gis_dir in your R environment,
          or GIS_DIR or DIR_GIS in your system environment (e.g. in .Renviron or .env file)")
+  }else{
+    d <- ds[1]
   }
 
 
