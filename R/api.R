@@ -14,6 +14,7 @@
 #' @param max_retries
 #' @param initial_sleep
 #' @param backoff_factor
+#' @param use_cache
 #'
 #' @return tibble
 #' @export
@@ -35,7 +36,14 @@
 #'
 api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, format="csv", ...,
                     params=list(),
-                    max_retries = 3, initial_sleep = 1, backoff_factor = 2) {
+                    max_retries = 3,
+                    initial_sleep = 1,
+                    backoff_factor = 2,
+                    use_cache = F,
+                    cache_folder = "cache",
+                    refresh_cache = F
+                    ) {
+
   results_list <- list()
 
   # Add "https://" to endpoint if not present
@@ -55,7 +63,6 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
     params$date_to <- Sys.Date()
   }
 
-
   # Create date intervals
   if (!is.null(params$date_from) && !is.null(split_by)) {
     start_date <- as.Date(params$date_from)
@@ -74,41 +81,69 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
     clear = FALSE
   )
 
-  # Function to get data for a given interval
-  get_data_for_interval <- function(interval) {
-    interval_params <- params
-    if (!is.null(interval[[1]])) interval_params$date_from <- interval[[1]]
-    if (!is.null(interval[[2]])) interval_params$date_to <- interval[[2]]
-
-    # If any parameter is a list, convert it to a string
-    interval_params <- lapply(interval_params, function(x) if (is.vector(x)) paste(x, collapse = ",") else x)
-
-    # Remove null params to keep default endpoint values (not sure it is necessary)
-    interval_params <- interval_params[!sapply(interval_params, is.null)]
-
-    attempt <- 1
-    current_sleep <- initial_sleep
-    while (attempt <= max_retries) {
-      try({
-        response <- httr::GET(url = endpoint, query = interval_params)
-        if (httr::status_code(response) == 200) {
-          return(read_csv(httr::content(response, "text"), col_types = cols()))
-        }
-      }, silent = TRUE)
-      if (attempt < max_retries) {
-        Sys.sleep(current_sleep)
-        current_sleep <- current_sleep * backoff_factor
-      }
-      attempt <- attempt + 1
-    }
-    stop("API request failed after ", max_retries, " attempts")
+  if(use_cache){
+    get <- memoise(api._get_raw, cache = cache_filesystem(cache_folder))
+  }else{
+    get <- api._get_raw
   }
 
   # Retrieve data for each interval
-  for (interval in date_intervals) {
-    results_list[[length(results_list) + 1]] <- get_data_for_interval(interval)
-    pb$tick()
-  }
+  lapply(date_intervals, function(interval){
+    interval_params <- params
+    interval_params$date_from <- interval[[1]]
+    interval_params$date_to <- interval[[2]]
 
-  bind_rows(results_list)
+    get_params <- list(
+      endpoint = endpoint,
+      params = interval_params,
+      max_retries = max_retries,
+      initial_sleep = initial_sleep,
+      backoff_factor = backoff_factor
+    )
+
+    if(use_cache & refresh_cache){
+      message("Clearing cache")
+      do.call(drop_cache(get), get_params)
+    }
+
+    res <- do.call(get, get_params)
+
+    pb$tick()
+
+    return(res)
+  }) %>%
+    bind_rows()
 }
+
+
+
+# "Private" functions -----------------------------------------------------
+api._get_raw <- function(endpoint, params, max_retries, initial_sleep, backoff_factor){
+
+  # If any parameter is a list, convert it to a string
+  params <- lapply(params, function(x) if (is.vector(x)) paste(x, collapse = ",") else x)
+
+  # Remove null params to keep default endpoint values (not sure it is necessary)
+  params <- params[!sapply(params, is.null)]
+
+  attempt <- 1
+  current_sleep <- initial_sleep
+  while (attempt <= max_retries) {
+    try({
+      response <- httr::GET(url = endpoint, query = params)
+      if (httr::status_code(response) == 200) {
+        return(read_csv(httr::content(response, "text"), col_types = cols()))
+      }
+      if (httr::status_code(response) == 204) {
+        return(tibble())
+      }
+    }, silent = TRUE)
+    if (attempt < max_retries) {
+      Sys.sleep(current_sleep)
+      current_sleep <- current_sleep * backoff_factor
+    }
+    attempt <- attempt + 1
+  }
+  stop("API request failed after ", max_retries, " attempts")
+}
+

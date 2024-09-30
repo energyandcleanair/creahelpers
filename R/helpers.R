@@ -390,9 +390,9 @@ paste.xl <- function(header=T, ...)
   read.table('clipboard', sep='\t', header=header, ...)
 
 #copy a data.frame as a string that can be pasted into an Excel spreadsheet
-copy.xl <- function(df, col.names=T, quote=F, row.names=F, ...)
-  write.table(df, 'clipboard', sep='\t',
-              col.names=col.names, quote=quote, row.names=row.names, ...)
+copy.xl <- function(df, col.names=T, quote=F, row.names=F, ...){
+  clipr::write_clip(df, sep = "\t", col.names = col.names, row.names = row.names, quote = quote, ...)
+}
 
 #' A rolling average function that completes date
 #' and fill numerical values with NA or user-specified value
@@ -516,5 +516,20 @@ make_names <- function(...){
   unique_y <- make_unique(unique_x)
 
   recode(x, !!!setNames(unique_y, unique_x))
+}
+
+
+
+#' Returns whether or not a and b have exact same unique values
+#'
+#' @param a
+#' @param b
+#'
+#' @return
+#' @export
+#'
+#' @examples
+sets_are_equal <- function(a, b){
+  length(a) == length(b) && all(sort(unique(a)) == sort(unique(b)))
 }
 
