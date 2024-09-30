@@ -166,6 +166,15 @@ na.cover <- function(x, x.new) { ifelse(is.na(x), x.new, x) }
 na.cover <- function(x, x.new) { ifelse(is.na(x), x.new, x) }
 
 
+#' Replace a zero length vector with a vector of length one with a specified value, by default NA
+#'
+#' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
+#' @export
+if_null <- function(x, replacement=NA) {
+  if(length(x)==0) x[1] <- replacement
+  x
+}
+
 #' Round a number down to specified number of significant digits
 #'
 #' @author Lauri Myllyvirta \email{lauri@@energyandcleanair.org}
