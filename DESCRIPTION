@@ -40,7 +40,8 @@ Imports:
     logger,
     clipr,
     uuid,
-    readxl
+    readxl,
+    readr,
 Remotes:
     statnmap/cartomisc
 RoxygenNote: 7.2.3
