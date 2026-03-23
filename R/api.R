@@ -41,7 +41,8 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
                     backoff_factor = 2,
                     use_cache = F,
                     cache_folder = "cache",
-                    refresh_cache = F
+                    refresh_cache = F,
+                    verbose = F
                     ) {
 
   results_list <- list()
@@ -98,7 +99,8 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
       params = interval_params,
       max_retries = max_retries,
       initial_sleep = initial_sleep,
-      backoff_factor = backoff_factor
+      backoff_factor = backoff_factor,
+      verbose = verbose
     )
 
     if(use_cache & refresh_cache){
@@ -118,10 +120,13 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
 
 
 # "Private" functions -----------------------------------------------------
-api._get_raw <- function(endpoint, params, max_retries, initial_sleep, backoff_factor){
+api._get_raw <- function(endpoint, params, max_retries, initial_sleep, backoff_factor, verbose=F){
 
   # If any parameter is a list, convert it to a string
   params <- lapply(params, function(x) if (is.vector(x)) paste(x, collapse = ",") else x)
+
+  # If any parameter is a date, convert to YYYY-MM-DD
+  params <- lapply(params, function(x) if (lubridate::is.Date(x)) format(x, "%Y-%m-%d") else x)
 
   # Remove null params to keep default endpoint values (not sure it is necessary)
   params <- params[!sapply(params, is.null)]
@@ -130,7 +135,18 @@ api._get_raw <- function(endpoint, params, max_retries, initial_sleep, backoff_f
   current_sleep <- initial_sleep
   while (attempt <= max_retries) {
     try({
+
+      if(verbose){
+        params_str <- paste0(names(params), "=", unlist(params), collapse = ",")
+        message(glue("Retrieving data from {endpoint} with {params_str}"))
+      }
+
       response <- httr::GET(url = endpoint, query = params)
+
+      if(verbose){
+        message("Response status: ", httr::status_code(response))
+      }
+
       if (httr::status_code(response) == 200) {
         return(read_csv(httr::content(response, "text"), col_types = cols()))
       }

@@ -35,6 +35,8 @@ importFrom(dplyr,tibble)
 importFrom(dplyr,ungroup)
 importFrom(dplyr,vars)
 
+importFrom(glue,glue)
+
 importFrom(lubridate,"hour<-")
 importFrom(lubridate,"year<-")
 importFrom(lubridate,day)
@@ -43,6 +45,8 @@ importFrom(lubridate,month)
 importFrom(lubridate,year)
 importFrom(lubridate,ymd)
 importFrom(lubridate,ymd_h)
+
+importFrom(magick,image_read)
 
 importFrom(magrittr,"%<>%")
 importFrom(magrittr,"%>%")
