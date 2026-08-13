@@ -82,9 +82,9 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
     clear = FALSE
   )
 
-  if(use_cache){
-    get <- memoise(api._get_raw, cache = cache_filesystem(cache_folder))
-  }else{
+  if (use_cache) {
+    get <- api._memoise_parquet(api._get_raw, cache_folder)
+  } else {
     get <- api._get_raw
   }
 
@@ -103,9 +103,8 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
       verbose = verbose
     )
 
-    if(use_cache & refresh_cache){
-      message("Clearing cache")
-      do.call(drop_cache(get), get_params)
+    if (use_cache) {
+      get_params$.refresh_cache <- refresh_cache
     }
 
     res <- do.call(get, get_params)
@@ -122,14 +121,7 @@ api.get <- function(endpoint, date_from=NULL, date_to=NULL, split_by=NULL, forma
 # "Private" functions -----------------------------------------------------
 api._get_raw <- function(endpoint, params, max_retries, initial_sleep, backoff_factor, verbose=F){
 
-  # If any parameter is a list, convert it to a string
-  params <- lapply(params, function(x) if (is.vector(x)) paste(x, collapse = ",") else x)
-
-  # If any parameter is a date, convert to YYYY-MM-DD
-  params <- lapply(params, function(x) if (lubridate::is.Date(x)) format(x, "%Y-%m-%d") else x)
-
-  # Remove null params to keep default endpoint values (not sure it is necessary)
-  params <- params[!sapply(params, is.null)]
+  params <- api._normalize_params(params)
 
   attempt <- 1
   current_sleep <- initial_sleep
@@ -163,3 +155,71 @@ api._get_raw <- function(endpoint, params, max_retries, initial_sleep, backoff_f
   stop("API request failed after ", max_retries, " attempts")
 }
 
+
+api._normalize_params <- function(params) {
+  # Match the values sent by httr so equivalent requests share a cache key.
+  params <- lapply(params, function(x) {
+    if (lubridate::is.Date(x)) {
+      x <- format(x, "%Y-%m-%d")
+    }
+    if (is.vector(x)) paste(x, collapse = ",") else x
+  })
+  params <- params[!vapply(params, is.null, logical(1))]
+
+  if (length(params) > 1 && !is.null(names(params))) {
+    params <- params[order(names(params))]
+  }
+
+  params
+}
+
+
+api._memoise_parquet <- function(f, cache_folder) {
+  force(f)
+  force(cache_folder)
+  if (!dir.exists(cache_folder)) {
+    dir.create(cache_folder, recursive = TRUE)
+  }
+
+  function(endpoint, params, ..., .refresh_cache = FALSE) {
+    cache_path <- api._cache_path(endpoint, params, cache_folder)
+
+    if (!.refresh_cache && file.exists(cache_path)) {
+      return(arrow::read_parquet(cache_path, as_data_frame = TRUE))
+    }
+
+    value <- f(endpoint = endpoint, params = params, ...)
+    arrow::write_parquet(value, cache_path)
+    value
+  }
+}
+
+
+api._cache_path <- function(endpoint, params, cache_folder) {
+  parsed_endpoint <- httr::parse_url(endpoint)
+  endpoint_path <- utils::URLdecode(sub("/+$", "", parsed_endpoint$path))
+  endpoint_basename <- basename(endpoint_path)
+  if (!nzchar(endpoint_basename) || endpoint_basename == ".") {
+    endpoint_basename <- parsed_endpoint$hostname
+  }
+  endpoint_basename <- gsub("[^A-Za-z0-9_-]+", "_", endpoint_basename)
+  endpoint_basename <- gsub("^_+|_+$", "", endpoint_basename)
+
+  normalized_params <- api._normalize_params(params)
+  request_hash <- digest::digest(
+    list(endpoint = endpoint, params = normalized_params),
+    algo = "xxhash64"
+  )
+
+  filename_parts <- endpoint_basename
+  if (!is.null(params$date_from)) {
+    filename_parts <- c(
+      filename_parts,
+      format(as.Date(params$date_from), "%Y-%m-%d"),
+      format(as.Date(params$date_to), "%Y-%m-%d")
+    )
+  }
+  filename_parts <- c(filename_parts, request_hash)
+
+  file.path(cache_folder, paste0(paste(filename_parts, collapse = "_"), ".parquet"))
+}
